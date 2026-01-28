@@ -1,13 +1,9 @@
-/******************************Module*Header*******************************\
- * Module Name: BltFuncs.cxx
- *
- * Basic Display Driver copying functionality
- *
- *
- * Copyright (c) 2010 Microsoft Corporation
-\**************************************************************************/
+// SPDX-License-Identifier: MS-PL
 
-#include "BDD.hxx"
+// Based on the Microsoft KMDOD example
+// Copyright (c) 2010 Microsoft Corporation
+
+#include "bdd.hxx"
 
 // For the following macros, c must be a UCHAR.
 #define UPPER_6_BITS(c) (((c) & rMaskTable[6 - 1]) >> 2)
@@ -119,7 +115,7 @@ VOID GetPitches(_In_ CONST BLT_INFO *pBltInfo, _Out_ LONG *pPixelPitch, _Out_ LO
         return;
     }
     default: {
-        BDD_LOG_ASSERTION1("Invalid rotation (0x%I64x) specified", pBltInfo->Rotation);
+        BDD_LOG_ASSERTION("Invalid rotation (0x%x) specified", pBltInfo->Rotation);
         *pPixelPitch = 0;
         *pRowPitch = 0;
         return;
@@ -152,7 +148,7 @@ BYTE *GetRowStart(_In_ CONST BLT_INFO *pBltInfo, CONST RECT *pRect) {
         break;
     }
     default: {
-        BDD_LOG_ASSERTION1("Invalid rotation (0x%I64x) specified", pBltInfo->Rotation);
+        BDD_LOG_ASSERTION("Invalid rotation (0x%x) specified", pBltInfo->Rotation);
         break;
     }
     }
@@ -270,8 +266,8 @@ VOID BltBits(BLT_INFO *pDst, CONST BLT_INFO *pSrc, UINT NumRects, _In_reads_(Num
     suppress : __WARNING_EXCEPTIONEXECUTEHANDLER, \
     "try/except is only able to protect against user-mode errors and these are the only errors we try to catch here");
     __except (EXCEPTION_EXECUTE_HANDLER) {
-        BDD_LOG_ERROR2(
-            "Either dst (0x%I64x) or src (0x%I64x) bits encountered exception during access.",
+        BDD_LOG_ERROR(
+            "Either dst (0x%p) or src (0x%p) bits encountered exception during access.",
             pDst->pBits,
             pSrc->pBits);
     }

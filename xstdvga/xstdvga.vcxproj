@@ -24,6 +24,8 @@
     <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">x64</Platform>
     <SampleGuid>{4E49D9DD-F772-41AD-9367-F225BF8261D3}</SampleGuid>
+    <ProjectName>xstdvga</ProjectName>
+    <WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -132,16 +134,20 @@
     </Midl>
   </ItemDefinitionGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <TargetName>SampleDisplay</TargetName>
+    <TargetName>xstdvga</TargetName>
+    <Inf2CatUseLocalTime>true</Inf2CatUseLocalTime>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
-    <TargetName>SampleDisplay</TargetName>
+    <TargetName>xstdvga</TargetName>
+    <Inf2CatUseLocalTime>true</Inf2CatUseLocalTime>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <TargetName>SampleDisplay</TargetName>
+    <TargetName>xstdvga</TargetName>
+    <Inf2CatUseLocalTime>true</Inf2CatUseLocalTime>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
-    <TargetName>SampleDisplay</TargetName>
+    <TargetName>xstdvga</TargetName>
+    <Inf2CatUseLocalTime>true</Inf2CatUseLocalTime>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -188,10 +194,11 @@
     <ClCompile Include="..\bdd_ddi.cxx" />
     <ClCompile Include="..\bdd_dmm.cxx" />
     <ClCompile Include="..\bdd_util.cxx" />
+    <ClCompile Include="..\bdd_vbe.cxx" />
     <ClCompile Include="..\bltfuncs.cxx" />
     <ClCompile Include="..\blthw.cxx" />
     <ClCompile Include="..\memory.cxx" />
-    <ResourceCompile Include="..\sampledisplay.rc" />
+    <ResourceCompile Include="..\xstdvga.rc" />
   </ItemGroup>
   <ItemGroup>
     <Inf Exclude="@(Inf)" Include="*.inf" />
@@ -203,9 +210,10 @@
     <None Exclude="@(None)" Include="*.def;*.bat;*.hpj;*.asmx" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Exclude="@(ClInclude)" Include="*.h;*.hpp;*.hxx;*.hm;*.inl;*.xsd" />
     <ClInclude Include="..\bdd.hxx" />
     <ClInclude Include="..\bdd_errorlog.hxx" />
+    <ClInclude Include="..\bdd_vbe.hxx" />
+    <ClInclude Include="..\vbe_qemu.hxx" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

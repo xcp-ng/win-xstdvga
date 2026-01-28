@@ -1,15 +1,10 @@
-/******************************Module*Header*******************************\
-* Module Name: bdd_util.cxx
-*
-* Basic Display Driver utility functions
-*
-* Created: 29-Mar-2011
-* Author: Amos Eshel [amosesh]
-*
-* Copyright (c) 2011 Microsoft Corporation
-\**************************************************************************/
+// SPDX-License-Identifier: MS-PL
 
-#include "BDD.hxx"
+// Based on the Microsoft KMDOD example
+// Author: Amos Eshel [amosesh]
+// Copyright (c) 2011 Microsoft Corporation
+
+#include "bdd.hxx"
 
 #pragma code_seg("PAGE")
 
@@ -50,8 +45,8 @@ MapFrameBuffer(
     // Check for parameters
     //
     if ((PhysicalAddress.QuadPart == (ULONGLONG)0) || (Length == 0) || (VirtualAddress == NULL)) {
-        BDD_LOG_ERROR3(
-            "One of PhysicalAddress.QuadPart (0x%I64x), Length (0x%I64x), VirtualAddress (0x%I64x) is NULL or 0",
+        BDD_LOG_ERROR(
+            "One of PhysicalAddress.QuadPart (0x%llx), Length (0x%lx), VirtualAddress (0x%p) is NULL or 0",
             PhysicalAddress.QuadPart,
             Length,
             VirtualAddress);
@@ -65,7 +60,7 @@ MapFrameBuffer(
 
         *VirtualAddress = MmMapIoSpaceEx(PhysicalAddress, Length, PAGE_READWRITE | PAGE_NOCACHE);
         if (*VirtualAddress == NULL) {
-            BDD_LOG_LOW_RESOURCE1("MmMapIoSpace returned a NULL buffer when trying to allocate 0x%I64x bytes", Length);
+            BDD_LOG_LOW_RESOURCE("MmMapIoSpace returned a NULL buffer when trying to allocate 0x%lx bytes", Length);
             return STATUS_NO_MEMORY;
         }
     }
@@ -84,7 +79,7 @@ UnmapFrameBuffer(_In_reads_bytes_(Length) VOID *VirtualAddress, _In_ ULONG Lengt
         // Allow this function to be called when there's no work to do, and treat as successful
         return STATUS_SUCCESS;
     } else if ((VirtualAddress == NULL) || (Length == 0)) {
-        BDD_LOG_ERROR2("Only one of Length (0x%I64x), VirtualAddress (0x%I64x) is NULL or 0", Length, VirtualAddress);
+        BDD_LOG_ERROR("Only one of Length (0x%lx), VirtualAddress (0x%p) is NULL or 0", Length, VirtualAddress);
         return STATUS_INVALID_PARAMETER;
     }
 

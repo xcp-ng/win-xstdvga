@@ -1,0 +1,100 @@
+; SPDX-License-Identifier: BSD-2-Clause
+
+[Version]
+Signature = "$Windows NT$"
+Class = Display
+ClassGUID = {4d36e968-e325-11ce-bfc1-08002be10318}
+Provider = %ProviderString%
+DriverVer = 03/15/2011,0.0.0.1
+CatalogFile = xstdvga.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+xstdvga.Files = 12
+xstdvga.FilesRFDS = 13
+
+[SourceDisksNames]
+0 = %DiskId%
+
+[SourceDisksFiles]
+xstdvga.sys = 0
+
+[Manufacturer]
+%ManufacturerName% = Standard,NTamd64.6.2,NTarm64.6.2,NTamd64.10.0...16299,NTarm64.10.0...16299
+
+[Standard.NTamd64.6.2]
+%DeviceName% = xstdvga_Inst,PCI\VEN_1234&DEV_1111&CC_0300
+
+[Standard.NTarm64.6.2]
+%DeviceName% = xstdvga_Inst,PCI\VEN_1234&DEV_1111&CC_0300
+
+[Standard.NTamd64.10.0...16299]
+%DeviceName% = xstdvga_InstRFDS,PCI\VEN_1234&DEV_1111&CC_0300
+
+[Standard.NTarm64.10.0...16299]
+%DeviceName% = xstdvga_InstRFDS,PCI\VEN_1234&DEV_1111&CC_0300
+
+[xstdvga_Inst]
+CopyFiles = xstdvga.Files
+
+[xstdvga_InstRFDS]
+CopyFiles = xstdvga.FilesRFDS
+
+;
+;   Install driver service
+;
+[xstdvga_Inst.Services]
+AddService = xstdvga,0x00000002,xstdvga_Service_Inst,xstdvga_EventLog_Inst
+
+[xstdvga_InstRFDS.Services]
+AddService = xstdvga,0x00000002,xstdvga_Service_InstRFDS,xstdvga_EventLog_Inst
+
+[xstdvga_Service_Inst]
+ServiceType = %SERVICE_KERNEL_DRIVER%
+StartType = %SERVICE_DEMAND_START%
+ErrorControl = %SERVICE_ERROR_IGNORE%
+ServiceBinary = %12%\xstdvga.sys
+
+[xstdvga_Service_InstRFDS]
+ServiceType = %SERVICE_KERNEL_DRIVER%
+StartType = %SERVICE_DEMAND_START%
+ErrorControl = %SERVICE_ERROR_IGNORE%
+ServiceBinary = %13%\xstdvga.sys
+
+;
+;   Display Adapter Specific Settings
+;
+[xstdvga.Files]
+xstdvga.sys
+
+[xstdvga.FilesRFDS]
+xstdvga.sys
+
+[xstdvga_EventLog_Inst]
+AddReg = xstdvga_EventLog_Inst.AddReg
+
+[xstdvga_EventLog_Inst.AddReg]
+HKR,,EventMessageFile,%REG_EXPAND_SZ%,"%%SystemRoot%%\System32\IoLogMsg.dll"
+HKR,,TypesSupported,%REG_DWORD%,7
+
+[Strings]
+ProviderString = "XCP-ng"
+ManufacturerName = "XCP-ng"
+DiskId = "XCP-ng Disk"
+DeviceName = "XCP-ng Standard VGA Display Adapter"
+
+SERVICE_BOOT_START = 0x0
+SERVICE_SYSTEM_START = 0x1
+SERVICE_AUTO_START = 0x2
+SERVICE_DEMAND_START = 0x3
+SERVICE_DISABLED = 0x4
+
+SERVICE_KERNEL_DRIVER = 0x1
+SERVICE_ERROR_IGNORE = 0x0
+SERVICE_ERROR_NORMAL = 0x1
+SERVICE_ERROR_SEVERE = 0x2
+SERVICE_ERROR_CRITICAL = 0x3
+
+REG_MULTI_SZ = 0x00010000
+REG_EXPAND_SZ = 0x00020000
+REG_DWORD = 0x00010001

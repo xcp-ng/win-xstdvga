@@ -1,13 +1,9 @@
-/******************************Module*Header*******************************\
-* Module Name: bdd.h
-*
-* Basic Display Driver memory allocation, deletion, and tracking
-*
-*
-* Copyright (c) 2010 Microsoft Corporation
-\**************************************************************************/
+// SPDX-License-Identifier: MS-PL
 
-#include "BDD.hxx"
+// Based on the Microsoft KMDOD example
+// Copyright (c) 2010 Microsoft Corporation
+
+#include "bdd.hxx"
 
 #pragma code_seg("PAGE")
 

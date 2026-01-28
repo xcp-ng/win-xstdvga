@@ -1,11 +1,8 @@
-/******************************Module*Header*******************************\
-* Module Name: BDD.hxx
-*
-* Basic Display Driver header file
-*
-*
-* Copyright (c) 2010 Microsoft Corporation
-\**************************************************************************/
+// SPDX-License-Identifier: MS-PL
+
+// Based on the Microsoft KMDOD example
+// Copyright (c) 2010 Microsoft Corporation
+// Copyright 2026 Vates.
 
 #ifndef _BDD_HXX_
 #define _BDD_HXX_
@@ -51,18 +48,11 @@ extern "C" {
 
 #define EDID_V1_BLOCK_SIZE 128
 
-#include "BDD_ErrorLog.hxx"
+#include "bdd_errorlog.hxx"
+#include "bdd_vbe.hxx"
 
-#define MIN_WIDTH 640
-#define MIN_HEIGHT 480
-#define MIN_BITS_PER_PIXEL_ALLOWED 8
 #define MIN_BYTES_PER_PIXEL_REPORTED 4
-
-#define DEFAULT_WIDTH 1024
-#define DEFAULT_HEIGHT 768
-
-#define MAX_INVALID_INHERITED_WIDTH 1024
-#define MAX_INVALID_INHERITED_HEIGHT 768
+#define MAX_BYTES_PER_PIXEL_REPORTED 4
 
 #define BITS_PER_BYTE 8
 
@@ -86,6 +76,8 @@ typedef struct _BDD_FLAGS {
     UINT EDID_ValidHeader : 1;   // ( 4) Retrieved EDID has a valid header
     UINT EDID_Attempted : 1;     // ( 5) 1 if an attempt was made to retrieve the EDID, successful or not
 
+    UINT HasPostDisplay : 1;
+
     // IMPORTANT: All new flags must be added to just before _LastFlag (i.e. right above this comment), this allows
     // different versions of diagnostics to still be useful.
     UINT _LastFlag : 1; // ( 6) Always set to 1, is used to ensure that diagnostic version matches binary version
@@ -96,7 +88,6 @@ typedef struct _BDD_FLAGS {
 // single mode setups.
 typedef struct _CURRENT_BDD_MODE {
     // The source mode currently set for HW Framebuffer
-    // For sample driver this info filled in StartDevice by the OS and never changed.
     DXGK_DISPLAY_INFORMATION DispInfo;
 
     // The rotation of the current mode. Rotation is performed in software during Present call
@@ -197,6 +188,8 @@ private:
 
     // Device information
     DXGK_DEVICE_INFO m_DeviceInfo;
+
+    BDD_MODE_INFO m_ModeInfo;
 
 public:
     BASIC_DISPLAY_DRIVER(_In_ DEVICE_OBJECT *pPhysicalDeviceObject);
@@ -306,7 +299,8 @@ public:
 private:
     VOID CleanUp();
 
-    NTSTATUS CommonStart();
+    // From KMDOD
+    // NTSTATUS CommonStart();
 
     NTSTATUS GetEdid(D3DDDI_VIDEO_PRESENT_TARGET_ID TargetId);
 
@@ -315,20 +309,14 @@ private:
     // This is because these two functions combine to allow BDD to store the bpp of a VBE mode in the
     // ColorFormat field of a DispInfo
     UINT BPPFromPixelFormat(D3DDDIFORMAT Format) const {
+        // Note that X8R8G8B8 is compatible with A8R8G8B8 and vice versa.
         switch (Format) {
-        case D3DDDIFMT_UNKNOWN:
-            return 0;
-        case D3DDDIFMT_P8:
-            return 8;
-        case D3DDDIFMT_R5G6B5:
-            return 16;
-        case D3DDDIFMT_R8G8B8:
-            return 24;
-        case D3DDDIFMT_X8R8G8B8: // fall through
+        case D3DDDIFMT_X8R8G8B8:
         case D3DDDIFMT_A8R8G8B8:
             return 32;
         default:
-            BDD_LOG_ASSERTION1("Unknown D3DDDIFORMAT 0x%I64x", Format);
+            // PostDisplayInfo can give us a rotten mode here, so don't assert
+            BDD_LOG_ERROR("Unknown D3DDDIFORMAT 0x%x", Format);
             return 0;
         }
     }
@@ -336,16 +324,10 @@ private:
     // Given bits per pixel, return the pixel format at the same bpp
     D3DDDIFORMAT PixelFormatFromBPP(UINT BPP) const {
         switch (BPP) {
-        case 8:
-            return D3DDDIFMT_P8;
-        case 16:
-            return D3DDDIFMT_R5G6B5;
-        case 24:
-            return D3DDDIFMT_R8G8B8;
         case 32:
-            return D3DDDIFMT_X8R8G8B8;
+            return D3DDDIFMT_A8R8G8B8;
         default:
-            BDD_LOG_ASSERTION1("A bit per pixel of 0x%I64x is not supported.", BPP);
+            BDD_LOG_ERROR("A bit per pixel of 0x%x is not supported.", BPP);
             return D3DDDIFMT_UNKNOWN;
         }
     }
@@ -395,6 +377,19 @@ private:
     // Set the information in the registry as described here:
     // http://msdn.microsoft.com/en-us/library/windows/hardware/ff569240(v=vs.85).aspx
     NTSTATUS RegisterHWInfo();
+
+    USHORT DispiReadUShort(USHORT Index) {
+        WRITE_PORT_USHORT((PUSHORT)VBE_DISPI_IOPORT_INDEX, Index);
+        return READ_PORT_USHORT((PUSHORT)VBE_DISPI_IOPORT_DATA);
+    }
+
+    VOID DispiWriteUShort(USHORT Index, USHORT Data) {
+        WRITE_PORT_USHORT((PUSHORT)VBE_DISPI_IOPORT_INDEX, Index);
+        WRITE_PORT_USHORT((PUSHORT)VBE_DISPI_IOPORT_DATA, Data);
+    }
+
+    NTSTATUS EnumerateVBE(_In_opt_ PDXGK_DISPLAY_INFORMATION PostDisplayInfo);
+    NTSTATUS SetVBEMode(USHORT ModeNumber);
 };
 
 //

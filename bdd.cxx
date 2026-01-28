@@ -1,25 +1,25 @@
-/******************************Module*Header*******************************\
-* Module Name: bdd.cxx
-*
-* Basic Display Driver functions implementation
-*
-*
-* Copyright (c) 2010 Microsoft Corporation
-\**************************************************************************/
+// SPDX-License-Identifier: MS-PL
 
-#include "BDD.hxx"
+// Based on the Microsoft KMDOD example
+// Copyright (c) 2010 Microsoft Corporation
+// Copyright 2026 Vates.
+
+#include "bdd.hxx"
 
 #pragma code_seg("PAGE")
 
 BASIC_DISPLAY_DRIVER::BASIC_DISPLAY_DRIVER(_In_ DEVICE_OBJECT *pPhysicalDeviceObject)
-    : m_pPhysicalDevice(pPhysicalDeviceObject), m_MonitorPowerState(PowerDeviceD0), m_AdapterPowerState(PowerDeviceD0) {
+    : m_pPhysicalDevice(pPhysicalDeviceObject), m_MonitorPowerState(PowerDeviceD0), m_AdapterPowerState(PowerDeviceD0),
+      m_SystemDisplaySourceId(D3DDDI_ID_UNINITIALIZED) {
     PAGED_CODE();
     *((UINT *)&m_Flags) = 0;
     m_Flags._LastFlag = TRUE;
     RtlZeroMemory(&m_DxgkInterface, sizeof(m_DxgkInterface));
     RtlZeroMemory(&m_StartInfo, sizeof(m_StartInfo));
-    RtlZeroMemory(m_CurrentModes, sizeof(m_CurrentModes));
+    RtlZeroMemory(&m_EDIDs, sizeof(m_EDIDs));
+    RtlZeroMemory(&m_CurrentModes, sizeof(m_CurrentModes));
     RtlZeroMemory(&m_DeviceInfo, sizeof(m_DeviceInfo));
+    RtlZeroMemory(&m_ModeInfo, sizeof(m_ModeInfo));
 
     for (UINT i = 0; i < MAX_VIEWS; i++) {
         m_HardwareBlt[i].Initialize(this, i);
@@ -52,28 +52,36 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartDevice(
     // Get device information from OS.
     NTSTATUS Status = m_DxgkInterface.DxgkCbGetDeviceInformation(m_DxgkInterface.DeviceHandle, &m_DeviceInfo);
     if (!NT_SUCCESS(Status)) {
-        BDD_LOG_ASSERTION1("DxgkCbGetDeviceInformation failed with status 0x%I64x", Status);
+        BDD_LOG_ASSERTION("DxgkCbGetDeviceInformation failed with status 0x%x", Status);
         return Status;
     }
 
     // Ignore return value, since it's not the end of the world if we failed to write these values to the registry
     RegisterHWInfo();
 
-    // TODO: Uncomment the line below after updating the TODOs in the function CheckHardware
-    //    Status = CheckHardware();
+    Status = CheckHardware();
     if (!NT_SUCCESS(Status)) {
         return Status;
     }
 
-    // This sample driver only uses the frame buffer of the POST device. DxgkCbAcquirePostDisplayOwnership
-    // gives you the frame buffer address and ensures that no one else is drawing to it. Be sure to give it back!
+    // we just need the current mode, the framebuffer will be taken from the BAR
     Status =
-        m_DxgkInterface.DxgkCbAcquirePostDisplayOwnership(m_DxgkInterface.DeviceHandle, &(m_CurrentModes[0].DispInfo));
-    if (!NT_SUCCESS(Status) || m_CurrentModes[0].DispInfo.Width == 0) {
+        m_DxgkInterface.DxgkCbAcquirePostDisplayOwnership(m_DxgkInterface.DeviceHandle, &m_CurrentModes[0].DispInfo);
+    if (NT_SUCCESS(Status) && m_CurrentModes[0].DispInfo.Width != 0) {
+        m_Flags.HasPostDisplay = TRUE;
+    } else {
         // The most likely cause of failure is that the driver is simply not running on a POST device, or we are running
-        // after a pre-WDDM 1.2 driver. Since we can't draw anything, we should fail to start.
-        return STATUS_UNSUCCESSFUL;
+        // after a pre-WDDM 1.2 driver.
+        BDD_LOG_INFORMATION("DxgkCbAcquirePostDisplayOwnership failed with status 0x%x", Status);
+        m_Flags.HasPostDisplay = FALSE;
     }
+
+    Status = EnumerateVBE(m_Flags.HasPostDisplay ? &m_CurrentModes[0].DispInfo : NULL);
+    if (!NT_SUCCESS(Status)) {
+        BDD_LOG_ERROR("EnumerateVBE failed with status 0x%x", Status);
+        return Status;
+    }
+
     m_Flags.DriverStarted = TRUE;
     *pNumberOfViews = MAX_VIEWS;
     *pNumberOfChildren = MAX_CHILDREN;
@@ -121,12 +129,24 @@ NTSTATUS BASIC_DISPLAY_DRIVER::SetPowerState(
     _In_ POWER_ACTION ActionType) {
     PAGED_CODE();
 
+    NTSTATUS Status;
+
     UNREFERENCED_PARAMETER(ActionType);
 
     BDD_ASSERT((HardwareUid < MAX_CHILDREN) || (HardwareUid == DISPLAY_ADAPTER_HW_ID));
 
     if (HardwareUid == DISPLAY_ADAPTER_HW_ID) {
         if (DevicePowerState == PowerDeviceD0) {
+            // get the previous firmware mode
+            Status = m_DxgkInterface.DxgkCbAcquirePostDisplayOwnership(
+                m_DxgkInterface.DeviceHandle,
+                &m_CurrentModes[0].DispInfo);
+            if (!NT_SUCCESS(Status) || m_CurrentModes[0].DispInfo.Width == 0) {
+                return STATUS_UNSUCCESSFUL;
+            }
+            if (!NT_SUCCESS(EnumerateVBE(&m_CurrentModes[0].DispInfo))) {
+                return STATUS_UNSUCCESSFUL;
+            }
 
             // When returning from D3 the device visibility defined to be off for all targets
             if (m_AdapterPowerState == PowerDeviceD3) {
@@ -137,14 +157,19 @@ NTSTATUS BASIC_DISPLAY_DRIVER::SetPowerState(
             }
         }
 
-        // Store new adapter power state
         m_AdapterPowerState = DevicePowerState;
-
-        // There is nothing to do to specifically power up/down the display adapter
         return STATUS_SUCCESS;
     } else {
-        // TODO: This is where the specified monitor should be powered up/down
-        NOTHING;
+        if (DevicePowerState == PowerDeviceD0) {
+            if (m_MonitorPowerState != PowerDeviceD0) {
+                DXGKARG_SETVIDPNSOURCEVISIBILITY Visibility;
+                Visibility.VidPnSourceId = FindSourceForTarget(HardwareUid, TRUE);
+                Visibility.Visible = TRUE;
+                SetVidPnSourceVisibility(&Visibility);
+            }
+        }
+
+        m_MonitorPowerState = DevicePowerState;
         return STATUS_SUCCESS;
     }
 }
@@ -194,12 +219,12 @@ BASIC_DISPLAY_DRIVER::QueryChildStatus(_Inout_ DXGK_CHILD_STATUS *pChildStatus, 
 
     case StatusRotation: {
         // D3DKMDT_MOA_NONE was reported, so this should never be called
-        BDD_LOG_ERROR0("Child status being queried for StatusRotation even though D3DKMDT_MOA_NONE was reported");
+        BDD_LOG_ERROR("Child status being queried for StatusRotation even though D3DKMDT_MOA_NONE was reported");
         return STATUS_INVALID_PARAMETER;
     }
 
     default: {
-        BDD_LOG_WARNING1("Unknown pChildStatus->Type (0x%I64x) requested.", pChildStatus->Type);
+        BDD_LOG_WARNING("Unknown pChildStatus->Type (0x%x) requested.", pChildStatus->Type);
         return STATUS_NOT_SUPPORTED;
     }
     }
@@ -242,8 +267,8 @@ NTSTATUS BASIC_DISPLAY_DRIVER::QueryAdapterInfo(_In_ CONST DXGKARG_QUERYADAPTERI
     switch (pQueryAdapterInfo->Type) {
     case DXGKQAITYPE_DRIVERCAPS: {
         if (pQueryAdapterInfo->OutputDataSize < sizeof(DXGK_DRIVERCAPS)) {
-            BDD_LOG_ERROR2(
-                "pQueryAdapterInfo->OutputDataSize (0x%I64x) is smaller than sizeof(DXGK_DRIVERCAPS) (0x%I64x)",
+            BDD_LOG_ERROR(
+                "pQueryAdapterInfo->OutputDataSize (0x%x) is smaller than sizeof(DXGK_DRIVERCAPS) (0x%zx)",
                 pQueryAdapterInfo->OutputDataSize,
                 sizeof(DXGK_DRIVERCAPS));
             return STATUS_BUFFER_TOO_SMALL;
@@ -269,9 +294,9 @@ NTSTATUS BASIC_DISPLAY_DRIVER::QueryAdapterInfo(_In_ CONST DXGKARG_QUERYADAPTERI
         DXGK_DISPLAY_DRIVERCAPS_EXTENSION *pDriverDisplayCaps;
 
         if (pQueryAdapterInfo->OutputDataSize < sizeof(*pDriverDisplayCaps)) {
-            BDD_LOG_ERROR2(
-                "pQueryAdapterInfo->OutputDataSize (0x%I64x) is smaller than sizeof(DXGK_DISPLAY_DRIVERCAPS_EXTENSION) "
-                "(0x%I64x)",
+            BDD_LOG_ERROR(
+                "pQueryAdapterInfo->OutputDataSize (0x%x) is smaller than sizeof(DXGK_DISPLAY_DRIVERCAPS_EXTENSION) "
+                "(0x%zx)",
                 pQueryAdapterInfo->OutputDataSize,
                 sizeof(DXGK_DISPLAY_DRIVERCAPS_EXTENSION));
 
@@ -291,7 +316,7 @@ NTSTATUS BASIC_DISPLAY_DRIVER::QueryAdapterInfo(_In_ CONST DXGKARG_QUERYADAPTERI
 
     default: {
         // BDD does not need to support any other adapter information types
-        BDD_LOG_WARNING1("Unknown QueryAdapterInfo Type (0x%I64x) requested", pQueryAdapterInfo->Type);
+        BDD_LOG_WARNING("Unknown QueryAdapterInfo Type (0x%x) requested", pQueryAdapterInfo->Type);
         return STATUS_NOT_SUPPORTED;
     }
     }
@@ -303,38 +328,6 @@ NTSTATUS BASIC_DISPLAY_DRIVER::CheckHardware() {
     NTSTATUS Status;
     ULONG VendorID;
     ULONG DeviceID;
-
-// TODO: If developing a driver for PCI based hardware, then use the second method to retrieve Vendor/Device IDs.
-// If developing for non-PCI based hardware (i.e. ACPI based hardware), use the first method to retrieve the IDs.
-#if 1 // ACPI-based device
-
-    // Get the Vendor & Device IDs on non-PCI system
-    ACPI_EVAL_INPUT_BUFFER_COMPLEX AcpiInputBuffer = {0};
-    AcpiInputBuffer.Signature = ACPI_EVAL_INPUT_BUFFER_COMPLEX_SIGNATURE;
-    AcpiInputBuffer.MethodNameAsUlong = ACPI_METHOD_HARDWARE_ID;
-    AcpiInputBuffer.Size = 0;
-    AcpiInputBuffer.ArgumentCount = 0;
-
-    BYTE OutputBuffer[sizeof(ACPI_EVAL_OUTPUT_BUFFER) + 0x10];
-    RtlZeroMemory(OutputBuffer, sizeof(OutputBuffer));
-    ACPI_EVAL_OUTPUT_BUFFER *pAcpiOutputBuffer = reinterpret_cast<ACPI_EVAL_OUTPUT_BUFFER *>(&OutputBuffer);
-
-    Status = m_DxgkInterface.DxgkCbEvalAcpiMethod(
-        m_DxgkInterface.DeviceHandle,
-        DISPLAY_ADAPTER_HW_ID,
-        &AcpiInputBuffer,
-        sizeof(AcpiInputBuffer),
-        pAcpiOutputBuffer,
-        sizeof(OutputBuffer));
-    if (!NT_SUCCESS(Status)) {
-        BDD_LOG_ERROR1("DxgkCbReadDeviceSpace failed to get hardware IDs with status 0x%I64x", Status);
-        return Status;
-    }
-
-    VendorID = ((ULONG *)(pAcpiOutputBuffer->Argument[0].Data))[0];
-    DeviceID = ((ULONG *)(pAcpiOutputBuffer->Argument[0].Data))[1];
-
-#else // PCI-based device
 
     // Get the Vendor & Device IDs on PCI system
     PCI_COMMON_HEADER Header = {0};
@@ -348,27 +341,31 @@ NTSTATUS BASIC_DISPLAY_DRIVER::CheckHardware() {
         sizeof(Header),
         &BytesRead);
 
-    if (!NT_SUCCESS(Status)) {
-        BDD_LOG_ERROR1("DxgkCbReadDeviceSpace failed with status 0x%I64x", Status);
+    if (!NT_SUCCESS(Status) || BytesRead < sizeof(Header)) {
+        BDD_LOG_ERROR("DxgkCbReadDeviceSpace failed with status 0x%x", Status);
         return Status;
     }
 
     VendorID = Header.VendorID;
     DeviceID = Header.DeviceID;
 
-#endif
-
-    // TODO: Replace 0x1414 with your Vendor ID
-    if (VendorID == 0x1414) {
-        switch (DeviceID) {
-        // TODO: Replace the case statements below with the Device IDs supported by this driver
-        case 0x0000:
-        case 0xFFFF:
-            return STATUS_SUCCESS;
-        }
+    if (Header.VendorID != 0x1234 || Header.DeviceID != 0x1111) {
+        return STATUS_GRAPHICS_DRIVER_MISMATCH;
     }
 
-    return STATUS_GRAPHICS_DRIVER_MISMATCH;
+    // needed for legacy dispi interface
+    if (Header.BaseClass != PCI_CLASS_DISPLAY_CTLR) {
+        return STATUS_GRAPHICS_DRIVER_MISMATCH;
+    }
+
+    USHORT DispiId = DispiReadUShort(VBE_DISPI_INDEX_ID);
+    BDD_LOG_INFORMATION("VBE version 0x%hx", DispiId);
+    // the only version supported by QEMU, needed for VBE_DISPI_INDEX_VIDEO_MEMORY_64K
+    if (DispiId != VBE_DISPI_ID5) {
+        return STATUS_GRAPHICS_DRIVER_MISMATCH;
+    }
+
+    return STATUS_SUCCESS;
 }
 
 // Even though Sample Basic Display Driver does not support hardware cursors, and reports such
@@ -382,7 +379,7 @@ NTSTATUS BASIC_DISPLAY_DRIVER::SetPointerPosition(_In_ CONST DXGKARG_SETPOINTERP
     if (!(pSetPointerPosition->Flags.Visible)) {
         return STATUS_SUCCESS;
     } else {
-        BDD_LOG_ASSERTION0(
+        BDD_LOG_ASSERTION(
             "SetPointerPosition should never be called to set the pointer to visible since BDD doesn't support "
             "hardware cursors.");
         return STATUS_UNSUCCESSFUL;
@@ -395,21 +392,23 @@ NTSTATUS BASIC_DISPLAY_DRIVER::SetPointerShape(_In_ CONST DXGKARG_SETPOINTERSHAP
     PAGED_CODE();
 
     BDD_ASSERT(pSetPointerShape != NULL);
-    BDD_LOG_ASSERTION0("SetPointerShape should never be called since BDD doesn't support hardware cursors.");
+    BDD_LOG_ASSERTION("SetPointerShape should never be called since BDD doesn't support hardware cursors.");
 
     return STATUS_NOT_IMPLEMENTED;
 }
+
 NTSTATUS BASIC_DISPLAY_DRIVER::PresentDisplayOnly(_In_ CONST DXGKARG_PRESENT_DISPLAYONLY *pPresentDisplayOnly) {
     PAGED_CODE();
 
     BDD_ASSERT(pPresentDisplayOnly != NULL);
     BDD_ASSERT(pPresentDisplayOnly->VidPnSourceId < MAX_VIEWS);
 
-    if (pPresentDisplayOnly->BytesPerPixel < MIN_BYTES_PER_PIXEL_REPORTED) {
+    if (pPresentDisplayOnly->BytesPerPixel < MIN_BYTES_PER_PIXEL_REPORTED ||
+        pPresentDisplayOnly->BytesPerPixel > MAX_BYTES_PER_PIXEL_REPORTED) {
         // Only >=32bpp modes are reported, therefore this Present should never pass anything less than 4 bytes per
         // pixel
-        BDD_LOG_ERROR1(
-            "pPresentDisplayOnly->BytesPerPixel is 0x%I64x, which is lower than the allowed.",
+        BDD_LOG_ERROR(
+            "pPresentDisplayOnly->BytesPerPixel is 0x%lx, which is lower than the allowed.",
             pPresentDisplayOnly->BytesPerPixel);
         return STATUS_INVALID_PARAMETER;
     }
@@ -440,7 +439,7 @@ NTSTATUS BASIC_DISPLAY_DRIVER::PresentDisplayOnly(_In_ CONST DXGKARG_PRESENT_DIS
                 m_CurrentModes[pPresentDisplayOnly->VidPnSourceId].DispInfo.Pitch;
             CenterShift += (m_CurrentModes[pPresentDisplayOnly->VidPnSourceId].DispInfo.Width -
                             m_CurrentModes[pPresentDisplayOnly->VidPnSourceId].SrcModeWidth) *
-                DstBitPerPixel / 8;
+                DstBitPerPixel / BITS_PER_BYTE;
             pDst += (int)CenterShift / 2;
         }
         return m_HardwareBlt[pPresentDisplayOnly->VidPnSourceId].ExecutePresentDisplayOnly(
@@ -556,6 +555,19 @@ VOID BASIC_DISPLAY_DRIVER::BlackOutScreen(D3DDDI_VIDEO_PRESENT_SOURCE_ID SourceI
     m_CurrentModes[SourceId].ZeroedOutEnd.QuadPart = NewPhysAddrEnd.QuadPart;
 }
 
+UINT BASIC_DISPLAY_DRIVER::FindMatchingVBEMode(CONST D3DKMDT_VIDPN_SOURCE_MODE *pSourceMode) const {
+    PAGED_CODE();
+
+    for (UINT i = 0; i < m_ModeInfo.Count; i++) {
+        if (m_ModeInfo.Modes[i].Width == pSourceMode->Format.Graphics.PrimSurfSize.cx &&
+            m_ModeInfo.Modes[i].Height == pSourceMode->Format.Graphics.PrimSurfSize.cy &&
+            m_ModeInfo.Modes[i].BitsPerPixel == BPPFromPixelFormat(pSourceMode->Format.Graphics.PixelFormat)) {
+            return i;
+        }
+    }
+    return m_ModeInfo.Count;
+}
+
 NTSTATUS
 BASIC_DISPLAY_DRIVER::WriteHWInfoStr(_In_ HANDLE DevInstRegKeyHandle, _In_ PCWSTR pszwValueName, _In_ PCSTR pszValue) {
     PAGED_CODE();
@@ -573,7 +585,7 @@ BASIC_DISPLAY_DRIVER::WriteHWInfoStr(_In_ HANDLE DevInstRegKeyHandle, _In_ PCWST
     RtlInitAnsiString(&AnsiStrValue, pszValue);
     Status = RtlAnsiStringToUnicodeString(&UnicodeStrValue, &AnsiStrValue, TRUE);
     if (!NT_SUCCESS(Status)) {
-        BDD_LOG_ERROR1("RtlAnsiStringToUnicodeString failed with Status: 0x%I64x", Status);
+        BDD_LOG_ERROR("RtlAnsiStringToUnicodeString failed with Status: 0x%x", Status);
         return Status;
     }
 
@@ -590,7 +602,7 @@ BASIC_DISPLAY_DRIVER::WriteHWInfoStr(_In_ HANDLE DevInstRegKeyHandle, _In_ PCWST
     RtlFreeUnicodeString(&UnicodeStrValue);
 
     if (!NT_SUCCESS(Status)) {
-        BDD_LOG_ERROR1("ZwSetValueKey failed with Status: 0x%I64x", Status);
+        BDD_LOG_ERROR("ZwSetValueKey failed with Status: 0x%x", Status);
     }
 
     return Status;
@@ -610,7 +622,7 @@ NTSTATUS BASIC_DISPLAY_DRIVER::RegisterHWInfo() {
     HANDLE DevInstRegKeyHandle;
     Status = IoOpenDeviceRegistryKey(m_pPhysicalDevice, PLUGPLAY_REGKEY_DRIVER, KEY_SET_VALUE, &DevInstRegKeyHandle);
     if (!NT_SUCCESS(Status)) {
-        BDD_LOG_ERROR2("IoOpenDeviceRegistryKey failed for PDO: 0x%I64x, Status: 0x%I64x", m_pPhysicalDevice, Status);
+        BDD_LOG_ERROR("IoOpenDeviceRegistryKey failed for PDO: 0x%p, Status: 0x%x", m_pPhysicalDevice, Status);
         return Status;
     }
 
@@ -640,7 +652,7 @@ NTSTATUS BASIC_DISPLAY_DRIVER::RegisterHWInfo() {
     DWORD MemorySize = 0; // BDD has no access to video memory
     Status = ZwSetValueKey(DevInstRegKeyHandle, &ValueNameMemorySize, 0, REG_DWORD, &MemorySize, sizeof(MemorySize));
     if (!NT_SUCCESS(Status)) {
-        BDD_LOG_ERROR1("ZwSetValueKey for MemorySize failed with Status: 0x%I64x", Status);
+        BDD_LOG_ERROR("ZwSetValueKey for MemorySize failed with Status: 0x%x", Status);
         return Status;
     }
 
@@ -741,7 +753,7 @@ VOID BASIC_DISPLAY_DRIVER::SystemDisplayWrite(
     Rect.bottom = Rect.top + SourceHeight;
 
     // Set up destination blt info
-    BLT_INFO DstBltInfo;
+    BLT_INFO DstBltInfo{};
     DstBltInfo.pBits = m_CurrentModes[m_SystemDisplaySourceId].FrameBuffer.Ptr;
     DstBltInfo.Pitch = m_CurrentModes[m_SystemDisplaySourceId].DispInfo.Pitch;
     DstBltInfo.BitsPerPel = BPPFromPixelFormat(m_CurrentModes[m_SystemDisplaySourceId].DispInfo.ColorFormat);
@@ -752,7 +764,7 @@ VOID BASIC_DISPLAY_DRIVER::SystemDisplayWrite(
     DstBltInfo.Height = m_CurrentModes[m_SystemDisplaySourceId].DispInfo.Height;
 
     // Set up source blt info
-    BLT_INFO SrcBltInfo;
+    BLT_INFO SrcBltInfo{};
     SrcBltInfo.pBits = pSource;
     SrcBltInfo.Pitch = SourceStride;
     SrcBltInfo.BitsPerPel = 32;

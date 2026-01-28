@@ -1,14 +1,9 @@
-/******************************Module*Header*******************************\
-* Module Name: blthw.cxx
-*
-* Sample display driver functions for a HW blt simulation. This file is
-* only provided to simulate how a real hardware-accelerated display-only
-* driver functions, and should not be used in a real driver.
-*
-* Copyright (c) 2011 Microsoft Corporation
-\**************************************************************************/
+// SPDX-License-Identifier: MS-PL
 
-#include "BDD.hxx"
+// Based on the Microsoft KMDOD example
+// Copyright (c) 2010 Microsoft Corporation
+
+#include "bdd.hxx"
 
 typedef struct {
     CONST DXGKRNL_INTERFACE *DxgkInterface;
@@ -135,7 +130,8 @@ StartHwBltPresentWorkerThread(
 }
 
 BDD_HWBLT::BDD_HWBLT()
-    : m_DevExt(NULL), m_SynchExecution(TRUE), m_hPresentWorkerThread(NULL), m_pPresentWorkerThread(NULL) {
+    : m_SourceId(D3DDDI_ID_UNINITIALIZED), m_DevExt(NULL), m_SynchExecution(TRUE), m_hPresentWorkerThread(NULL),
+      m_pPresentWorkerThread(NULL) {
     PAGED_CODE();
 
     KeInitializeEvent(&m_hThreadStartupEvent, NotificationEvent, FALSE);
