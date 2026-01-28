@@ -37,17 +37,17 @@ SampleDisplay.sys=0
 ;    Allow the driver to be loaded on VGA and XGA exposed by PCI bus and ACPI
 ;
 [Standard.NTamd64]
-%SampleDeviceName% = KDODSamp_Inst, PCI\VEN_1234&DEV_1111
+%SampleDeviceName% = KDODSamp_Inst, PCI\VEN_1234&DEV_1111&CC_0300
 
 
 
 [Standard.NTarm]
-%SampleDeviceName% = KDODSamp_Inst, PCI\VEN_1234&DEV_1111
+%SampleDeviceName% = KDODSamp_Inst, PCI\VEN_1234&DEV_1111&CC_0300
 
 
 
 [Standard.NTarm64]
-%SampleDeviceName% = KDODSamp_Inst, PCI\VEN_1234&DEV_1111
+%SampleDeviceName% = KDODSamp_Inst, PCI\VEN_1234&DEV_1111&CC_0300
 
 
 
