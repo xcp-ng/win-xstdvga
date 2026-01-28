@@ -19,22 +19,22 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\BDD.cxx">
+    <ClCompile Include="..\bdd.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\BDD_DDI.cxx">
+    <ClCompile Include="..\bdd_ddi.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\BDD_DMM.cxx">
+    <ClCompile Include="..\bdd_dmm.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\BDD_Util.cxx">
+    <ClCompile Include="..\bdd_util.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\BltFuncs.cxx">
+    <ClCompile Include="..\bltfuncs.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\BltHw.cxx">
+    <ClCompile Include="..\blthw.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\memory.cxx">
@@ -45,5 +45,18 @@
     <ResourceCompile Include="..\sampledisplay.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Inf Include="*.inf">
+      <Filter>Driver Files</Filter>
+    </Inf>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\bdd.hxx">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\bdd_errorlog.hxx">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -14,6 +14,11 @@
 #pragma code_seg("INIT")
 // BEGIN: Init Code
 
+#define DBG_PRINT_ENABLE_FILTER(_Id, _Level)                       \
+        do {                                                        \
+            DbgSetDebugFilterState((_Id), (_Level), TRUE);          \
+        } while (FALSE)
+
 //
 // Driver Entry point
 //
@@ -25,6 +30,11 @@ DriverEntry(
     _In_  UNICODE_STRING* pRegistryPath)
 {
     PAGED_CODE();
+
+    DBG_PRINT_ENABLE_FILTER(DPFLTR_IHVVIDEO_ID, DPFLTR_ERROR_LEVEL);
+    DBG_PRINT_ENABLE_FILTER(DPFLTR_IHVVIDEO_ID, DPFLTR_WARNING_LEVEL);
+    DBG_PRINT_ENABLE_FILTER(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL);
+    DBG_PRINT_ENABLE_FILTER(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL);
 
 
     // Initialize DDI function pointers and dxgkrnl
@@ -576,4 +586,3 @@ BddDdiSystemDisplayWrite(
 
 // END: Non-Paged Code
 #pragma code_seg(pop)
-
