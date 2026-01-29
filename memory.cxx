@@ -20,8 +20,7 @@ operator new(size_t Size, POOL_TYPE PoolType) {
 
     Size = (Size != 0) ? Size : 1;
 
-#pragma warning(suppress : 4996)
-    void *pObject = ExAllocatePoolWithTag(PoolType, Size, BDDTAG);
+    void *pObject = ExAllocatePoolZero(PoolType, Size, BDDTAG);
 
 #if DBG
     if (pObject != NULL) {
@@ -42,8 +41,7 @@ operator new[](size_t Size, POOL_TYPE PoolType) {
 
     Size = (Size != 0) ? Size : 1;
 
-#pragma warning(suppress : 4996)
-    void *pObject = ExAllocatePoolWithTag(PoolType, Size, BDDTAG);
+    void *pObject = ExAllocatePoolZero(PoolType, Size, BDDTAG);
 
 #if DBG
     if (pObject != NULL) {
