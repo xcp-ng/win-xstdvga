@@ -9,7 +9,9 @@ param (
     [string]$Configuration,
     [Parameter(Mandatory)]
     [ValidateSet("x64", "arm64")]
-    [string]$Platform
+    [string]$Platform,
+    [Parameter()]
+    [switch]$CodeAnalysis
 )
 
 # Drivers are ordered by build date first so Hmm gives you a more granular revision number (down to the minute).
@@ -28,6 +30,13 @@ $BuildArgs = @(
     "/p:XcpngVersionRevision=$DriverTime",
     "/t:$Target"
 )
+
+if ($CodeAnalysis) {
+    $BuildArgs += @(
+        "/p:RunCodeAnalysis=true",
+        "/p:EnablePREFast=true"
+    )
+}
 
 msbuild.exe @BuildArgs
 if ($LASTEXITCODE -ne 0) {
