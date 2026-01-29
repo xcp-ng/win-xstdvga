@@ -35,9 +35,11 @@ xstdvga.sys = 0
 %DeviceName% = xstdvga_InstRFDS,PCI\VEN_1234&DEV_1111&CC_0300
 
 [xstdvga_Inst]
+FeatureScore = F9
 CopyFiles = xstdvga.Files
 
 [xstdvga_InstRFDS]
+FeatureScore = F9
 CopyFiles = xstdvga.FilesRFDS
 
 ;
