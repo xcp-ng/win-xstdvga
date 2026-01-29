@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- See build.ps1 for dynamic version setting -->
+  <PropertyGroup>
+    <XcpngVersionMajor>0</XcpngVersionMajor>
+    <XcpngVersionMinor>1</XcpngVersionMinor>
+    <XcpngVersionBuild>0</XcpngVersionBuild>
+    <XcpngVersionRevision>0</XcpngVersionRevision>
+    <XcpngFullVersion>$(XcpngVersionMajor).$(XcpngVersionMinor).$(XcpngVersionBuild).$(XcpngVersionRevision)</XcpngFullVersion>
+    <XcpngCommaVersion>$(XcpngVersionMajor),$(XcpngVersionMinor),$(XcpngVersionBuild),$(XcpngVersionRevision)</XcpngCommaVersion>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ResourceCompile>
+      <PreprocessorDefinitions>VER_FILEVERSION=$(XcpngCommaVersion);VER_FILEVERSION_STR=\"$(XcpngFullVersion)\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+</Project>
