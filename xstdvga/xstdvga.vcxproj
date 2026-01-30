@@ -183,6 +183,7 @@
     <ClCompile Include="..\bdd_ddi.cxx" />
     <ClCompile Include="..\bdd_dmm.cxx" />
     <ClCompile Include="..\bdd_edid.cxx" />
+    <ClCompile Include="..\bdd_hw.cxx" />
     <ClCompile Include="..\bdd_util.cxx" />
     <ClCompile Include="..\bdd_vbe.cxx" />
     <ClCompile Include="..\bltfuncs.cxx" />

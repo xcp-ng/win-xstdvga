@@ -69,14 +69,18 @@ typedef struct _BLT_INFO {
 #define MAX_CHILDREN 1
 #define MAX_VIEWS 1
 
+#define BDD_USE_LEGACY 0
+
 typedef struct _BDD_FLAGS {
-    UINT DriverStarted : 1;      // ( 1) 1 after StartDevice and 0 after StopDevice
+    UINT DriverStarted : 1; // ( 1) 1 after StartDevice and 0 after StopDevice
+
+    UINT Legacy : 1;
+    UINT HasPostDisplay : 1;
+
     UINT EDID_Retrieved : 1;     // ( 2) EDID was successfully retrieved
     UINT EDID_ValidChecksum : 1; // ( 3) Retrieved EDID has a valid checksum
     UINT EDID_ValidHeader : 1;   // ( 4) Retrieved EDID has a valid header
     UINT EDID_Attempted : 1;     // ( 5) 1 if an attempt was made to retrieve the EDID, successful or not
-
-    UINT HasPostDisplay : 1;
 
     // IMPORTANT: All new flags must be added to just before _LastFlag (i.e. right above this comment), this allows
     // different versions of diagnostics to still be useful.
@@ -166,6 +170,8 @@ private:
 
     // Information passed in by StartDevice DDI
     DXGK_START_INFO m_StartInfo;
+
+    PVOID m_MappedBar2;
 
     // Array of EDIDs, currently only supporting base block, hence EDID_V1_BLOCK_SIZE for size of each EDID
     BYTE m_EDIDs[MAX_CHILDREN][EDID_V1_BLOCK_SIZE];
@@ -368,8 +374,10 @@ private:
         _In_opt_ CONST D3DKMDT_VIDPN_SOURCE_MODE *pVidPnPinnedSourceModeInfo,
         D3DDDI_VIDEO_PRESENT_SOURCE_ID SourceId);
 
-    // Check that the hardware the driver is running on is hardware it is capable of driving.
-    NTSTATUS CheckHardware();
+    NTSTATUS StartHardware();
+    NTSTATUS StopHardware();
+
+    NTSTATUS FindMemoryResource(_In_ ULONG Index, _Out_opt_ PULONGLONG Start, _Out_ PULONGLONG Size);
 
     // Helper function for RegisterHWInfo
     NTSTATUS WriteHWInfoStr(_In_ HANDLE DevInstRegKeyHandle, _In_ PCWSTR pszwValueName, _In_ PCSTR pszValue);
@@ -378,14 +386,28 @@ private:
     // http://msdn.microsoft.com/en-us/library/windows/hardware/ff569240(v=vs.85).aspx
     NTSTATUS RegisterHWInfo();
 
+    volatile PUSHORT Bar2DispiOffset(USHORT Index) {
+        BDD_ASSERT_CHK(m_MappedBar2);
+        BDD_ASSERT_CHK(Index <= 0x0A);
+        return reinterpret_cast<volatile PUSHORT>(static_cast<PUCHAR>(m_MappedBar2) + 0x500 + (Index << 1));
+    }
+
     USHORT DispiReadUShort(USHORT Index) {
-        WRITE_PORT_USHORT((PUSHORT)VBE_DISPI_IOPORT_INDEX, Index);
-        return READ_PORT_USHORT((PUSHORT)VBE_DISPI_IOPORT_DATA);
+        if (m_Flags.Legacy && BDD_USE_LEGACY) {
+            WRITE_PORT_USHORT((PUSHORT)VBE_DISPI_IOPORT_INDEX, Index);
+            return READ_PORT_USHORT((PUSHORT)VBE_DISPI_IOPORT_DATA);
+        } else {
+            return READ_REGISTER_USHORT(Bar2DispiOffset(Index));
+        }
     }
 
     VOID DispiWriteUShort(USHORT Index, USHORT Data) {
-        WRITE_PORT_USHORT((PUSHORT)VBE_DISPI_IOPORT_INDEX, Index);
-        WRITE_PORT_USHORT((PUSHORT)VBE_DISPI_IOPORT_DATA, Data);
+        if (m_Flags.Legacy && BDD_USE_LEGACY) {
+            WRITE_PORT_USHORT((PUSHORT)VBE_DISPI_IOPORT_INDEX, Index);
+            WRITE_PORT_USHORT((PUSHORT)VBE_DISPI_IOPORT_DATA, Data);
+        } else {
+            WRITE_REGISTER_USHORT(Bar2DispiOffset(Index), Data);
+        }
     }
 
     NTSTATUS EnumerateVBE(_In_opt_ PDXGK_DISPLAY_INFORMATION PostDisplayInfo);

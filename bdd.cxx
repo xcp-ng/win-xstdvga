@@ -9,7 +9,10 @@
 #pragma code_seg("PAGE")
 
 BASIC_DISPLAY_DRIVER::BASIC_DISPLAY_DRIVER(_In_ DEVICE_OBJECT *pPhysicalDeviceObject)
-    : m_pPhysicalDevice(pPhysicalDeviceObject), m_MonitorPowerState(PowerDeviceD0), m_AdapterPowerState(PowerDeviceD0),
+    : m_pPhysicalDevice(pPhysicalDeviceObject), //
+      m_MappedBar2(NULL),                       //
+      m_MonitorPowerState(PowerDeviceD0),       //
+      m_AdapterPowerState(PowerDeviceD0),       //
       m_SystemDisplaySourceId(D3DDDI_ID_UNINITIALIZED) {
     PAGED_CODE();
     *((UINT *)&m_Flags) = 0;
@@ -59,8 +62,9 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartDevice(
     // Ignore return value, since it's not the end of the world if we failed to write these values to the registry
     RegisterHWInfo();
 
-    Status = CheckHardware();
+    Status = StartHardware();
     if (!NT_SUCCESS(Status)) {
+        BDD_LOG_ERROR("StartHardware failed with status 0x%x", Status);
         return Status;
     }
 
@@ -79,7 +83,7 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartDevice(
     Status = EnumerateVBE(m_Flags.HasPostDisplay ? &m_CurrentModes[0].DispInfo : NULL);
     if (!NT_SUCCESS(Status)) {
         BDD_LOG_ERROR("EnumerateVBE failed with status 0x%x", Status);
-        return Status;
+        goto OutStopHardware;
     }
 
     m_Flags.DriverStarted = TRUE;
@@ -87,12 +91,19 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartDevice(
     *pNumberOfChildren = MAX_CHILDREN;
 
     return STATUS_SUCCESS;
+
+OutStopHardware:
+    StopHardware();
+
+    return Status;
 }
 
 NTSTATUS BASIC_DISPLAY_DRIVER::StopDevice(VOID) {
     PAGED_CODE();
 
     CleanUp();
+
+    StopHardware();
 
     m_Flags.DriverStarted = FALSE;
 
@@ -320,52 +331,6 @@ NTSTATUS BASIC_DISPLAY_DRIVER::QueryAdapterInfo(_In_ CONST DXGKARG_QUERYADAPTERI
         return STATUS_NOT_SUPPORTED;
     }
     }
-}
-
-NTSTATUS BASIC_DISPLAY_DRIVER::CheckHardware() {
-    PAGED_CODE();
-
-    NTSTATUS Status;
-    ULONG VendorID;
-    ULONG DeviceID;
-
-    // Get the Vendor & Device IDs on PCI system
-    PCI_COMMON_HEADER Header = {0};
-    ULONG BytesRead;
-
-    Status = m_DxgkInterface.DxgkCbReadDeviceSpace(
-        m_DxgkInterface.DeviceHandle,
-        DXGK_WHICHSPACE_CONFIG,
-        &Header,
-        0,
-        sizeof(Header),
-        &BytesRead);
-
-    if (!NT_SUCCESS(Status) || BytesRead < sizeof(Header)) {
-        BDD_LOG_ERROR("DxgkCbReadDeviceSpace failed with status 0x%x", Status);
-        return Status;
-    }
-
-    VendorID = Header.VendorID;
-    DeviceID = Header.DeviceID;
-
-    if (Header.VendorID != 0x1234 || Header.DeviceID != 0x1111) {
-        return STATUS_GRAPHICS_DRIVER_MISMATCH;
-    }
-
-    // needed for legacy dispi interface
-    if (Header.BaseClass != PCI_CLASS_DISPLAY_CTLR) {
-        return STATUS_GRAPHICS_DRIVER_MISMATCH;
-    }
-
-    USHORT DispiId = DispiReadUShort(VBE_DISPI_INDEX_ID);
-    BDD_LOG_INFORMATION("VBE version 0x%hx", DispiId);
-    // the only version supported by QEMU, needed for VBE_DISPI_INDEX_VIDEO_MEMORY_64K
-    if (DispiId != VBE_DISPI_ID5) {
-        return STATUS_GRAPHICS_DRIVER_MISMATCH;
-    }
-
-    return STATUS_SUCCESS;
 }
 
 // Even though Sample Basic Display Driver does not support hardware cursors, and reports such

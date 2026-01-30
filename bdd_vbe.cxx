@@ -49,46 +49,27 @@ CONST BDD_VBE_STANDARD_RESOLUTION BddVbeStandardResolutions[BDD_VBE_STANDARD_RES
 NTSTATUS BASIC_DISPLAY_DRIVER::EnumerateVBE(_In_opt_ PDXGK_DISPLAY_INFORMATION PostDisplayInfo) {
     PAGED_CODE();
 
-    PHYSICAL_ADDRESS PhysicalAddress;
-    ULONGLONG FramebufferLength;
-    PCM_FULL_RESOURCE_DESCRIPTOR Full;
-    PCM_PARTIAL_RESOURCE_DESCRIPTOR Partial;
+    PHYSICAL_ADDRESS Framebuffer;
+    ULONGLONG FramebufferSize;
+    NTSTATUS Status;
 
     m_ModeInfo.Count = 0;
-    PhysicalAddress.QuadPart = 0;
-    FramebufferLength = 0;
 
-    for (ULONG i = 0; i < m_DeviceInfo.TranslatedResourceList->Count; i++) {
-        Full = &m_DeviceInfo.TranslatedResourceList->List[i];
-
-        for (ULONG j = 0; j < Full->PartialResourceList.Count; ++j) {
-            Partial = &Full->PartialResourceList.PartialDescriptors[j];
-
-            if (Partial->Type == CmResourceTypeMemory || Partial->Type == CmResourceTypeMemoryLarge) {
-                FramebufferLength = RtlCmDecodeMemIoResource(Partial, (PULONGLONG)&PhysicalAddress.QuadPart);
-                break;
-            }
-        }
-        if (PhysicalAddress.QuadPart != 0) {
-            break;
-        }
+    Status = FindMemoryResource(0, (PULONGLONG)&Framebuffer.QuadPart, &FramebufferSize);
+    if (!NT_SUCCESS(Status)) {
+        BDD_LOG_ERROR("Failed to detect framebuffer with Status: 0x%x", Status);
+        return Status;
     }
+    BDD_LOG_INFORMATION("Detected framebuffer BAR at 0x%llx+0x%llx", Framebuffer.QuadPart, FramebufferSize);
 
-    if (PhysicalAddress.QuadPart == 0) {
-        BDD_LOG_ERROR("Failed to detect device");
-        return STATUS_DEVICE_CONFIGURATION_ERROR;
-    }
-    BDD_LOG_INFORMATION("Detected BAR at 0x%llx+0x%llx", PhysicalAddress.QuadPart, FramebufferLength);
-
-    USHORT MemoryChunks = DispiReadUShort(VBE_DISPI_INDEX_VIDEO_MEMORY_64K);
-    BDD_LOG_INFORMATION("%hu memory chunks", MemoryChunks);
-    ULONGLONG AvailableMemory = (ULONGLONG)MemoryChunks * 64 * 1024;
-    if (AvailableMemory > FramebufferLength) {
+    ULONG DispiMemory = (ULONG)DispiReadUShort(VBE_DISPI_INDEX_VIDEO_MEMORY_64K) * 64 * 1024;
+    if (DispiMemory > FramebufferSize) {
         BDD_LOG_WARNING(
-            "Available memory (%llu) is larger than framebuffer BAR (%llu)",
-            AvailableMemory,
-            FramebufferLength);
-        AvailableMemory = FramebufferLength;
+            "DISPI reported video memory (%lu) is larger than framebuffer BAR (%llu)",
+            DispiMemory,
+            FramebufferSize);
+    } else {
+        FramebufferSize = DispiMemory;
     }
 
     if (PostDisplayInfo != NULL && PostDisplayInfo->Width != 0) {
@@ -124,7 +105,7 @@ NTSTATUS BASIC_DISPLAY_DRIVER::EnumerateVBE(_In_opt_ PDXGK_DISPLAY_INFORMATION P
         }
 
         ULONG RequiredMemory = (ULONG)Resolution->Width * Resolution->Height * (BPP / BITS_PER_BYTE);
-        if (RequiredMemory == 0 || RequiredMemory > AvailableMemory) {
+        if (RequiredMemory == 0 || RequiredMemory > FramebufferSize) {
             BDD_LOG_INFORMATION("Skipped standard resolution %hux%hu (too big)", Resolution->Width, Resolution->Height);
             continue;
         }
@@ -143,7 +124,7 @@ NTSTATUS BASIC_DISPLAY_DRIVER::EnumerateVBE(_In_opt_ PDXGK_DISPLAY_INFORMATION P
         pBddMode->Height = Resolution->Height;
         pBddMode->BitsPerPixel = (USHORT)BPP;
         pBddMode->Pitch = (pBddMode->Width * pBddMode->BitsPerPixel) / BITS_PER_BYTE;
-        pBddMode->PhysicalAddress = PhysicalAddress;
+        pBddMode->PhysicalAddress = Framebuffer;
         pBddMode->ModeNumber = m_ModeInfo.Count;
 
         BDD_LOG_INFORMATION(

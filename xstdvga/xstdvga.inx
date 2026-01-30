@@ -24,9 +24,11 @@ xstdvga.sys = 0
 
 [Standard.NT$ARCH$.6.2]
 %DeviceName% = xstdvga_Inst,PCI\VEN_1234&DEV_1111&CC_0300
+%DeviceName% = xstdvga_Inst,PCI\VEN_1234&DEV_1111&CC_0380
 
 [Standard.NT$ARCH$.10.0...16299]
 %DeviceName% = xstdvga_InstRFDS,PCI\VEN_1234&DEV_1111&CC_0300
+%DeviceName% = xstdvga_InstRFDS,PCI\VEN_1234&DEV_1111&CC_0380
 
 [xstdvga_Inst]
 FeatureScore = F9
