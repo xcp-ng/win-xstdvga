@@ -14,7 +14,7 @@ $ErrorActionPreference = "Stop"
 
 Push-Location $PSScriptRoot
 try {
-    Remove-Item -Force -Recurse database
+    Remove-Item -Force -Recurse database -ErrorAction SilentlyContinue
     codeql database create database --language=cpp --source-root=. --command="powershell.exe -file .\build.ps1 -Configuration $Configuration -Platform $Platform -CodeAnalysis"
     codeql database analyze database microsoft/windows-drivers@1.8.0:windows-driver-suites/recommended.qls --format=sarifv2.1.0 --output=xstdvga\$Platform\$Configuration\xstdvga.sarif
     Push-Location xstdvga\$Platform\$Configuration
