@@ -2,6 +2,7 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- See build.ps1 for dynamic version setting -->
   <PropertyGroup>
+    <XcpngDriverDate>01/01/2026</XcpngDriverDate>
     <XcpngVersionMajor>0</XcpngVersionMajor>
     <XcpngVersionMinor>1</XcpngVersionMinor>
     <XcpngVersionBuild>0</XcpngVersionBuild>
@@ -10,6 +11,10 @@
     <XcpngCommaVersion>$(XcpngVersionMajor),$(XcpngVersionMinor),$(XcpngVersionBuild),$(XcpngVersionRevision)</XcpngCommaVersion>
   </PropertyGroup>
   <ItemDefinitionGroup>
+    <Inf>
+      <DateStamp>$(XcpngDriverDate)</DateStamp>
+      <TimeStamp>$(XcpngFullVersion)</TimeStamp>
+    </Inf>
     <ResourceCompile>
       <PreprocessorDefinitions>VER_FILEVERSION=$(XcpngCommaVersion);VER_FILEVERSION_STR=\"$(XcpngFullVersion)\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>

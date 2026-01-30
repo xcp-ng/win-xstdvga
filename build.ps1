@@ -16,8 +16,10 @@ param (
 
 # Drivers are ordered by build date first so Hmm gives you a more granular revision number (down to the minute).
 $Epoch = [datetime]::new(2026, 1, 1, 0, 0, 0, [System.DateTimeKind]::Utc)
-$DriverDate = ([datetime]::UtcNow - $Epoch).Days
-$DriverTime = Get-Date -Format Hmm
+$Now = [datetime]::UtcNow
+$DriverDate = $Now.ToString("MM/dd/yyyy")
+$DriverBuild = ($Now - $Epoch).Days
+$DriverRevision = $Now.ToString("Hmm")
 
 $ErrorActionPreference = "Stop"
 
@@ -26,8 +28,9 @@ $BuildArgs = @(
     "/m:4",
     "/p:Configuration=$Configuration",
     "/p:Platform=$Platform",
-    "/p:XcpngVersionBuild=$DriverDate",
-    "/p:XcpngVersionRevision=$DriverTime",
+    "/p:XcpngDriverDate=$DriverDate",
+    "/p:XcpngVersionBuild=$DriverBuild",
+    "/p:XcpngVersionRevision=$DriverRevision",
     "/t:$Target"
 )
 
