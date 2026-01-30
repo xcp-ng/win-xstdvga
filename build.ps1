@@ -13,33 +13,40 @@ param (
     [Parameter()]
     [switch]$CodeAnalysis,
     [Parameter()]
+    [switch]$NoDate,
+    [Parameter()]
     [string]$Project = "xstdvga"
 )
-
-# Drivers are ordered by build date first so Hmm gives you a more granular revision number (down to the minute).
-$Epoch = [datetime]::new(2026, 1, 1, 0, 0, 0, [System.DateTimeKind]::Utc)
-$Now = [datetime]::UtcNow
-$DriverDate = $Now.ToString("MM/dd/yyyy")
-$DriverBuild = ($Now - $Epoch).Days
-$DriverRevision = $Now.ToString("Hmm")
 
 $ErrorActionPreference = "Stop"
 
 $BuildArgs = @(
     (Resolve-Path "$Project.sln"),
+    "/t:$Target",
     "/m:4",
     "/p:Configuration=$Configuration",
-    "/p:Platform=$Platform",
-    "/p:XcpngDriverDate=$DriverDate",
-    "/p:XcpngVersionBuild=$DriverBuild",
-    "/p:XcpngVersionRevision=$DriverRevision",
-    "/t:$Target"
+    "/p:Platform=$Platform"
 )
 
 if ($CodeAnalysis) {
     $BuildArgs += @(
         "/p:RunCodeAnalysis=true",
         "/p:EnablePREFast=true"
+    )
+}
+
+if (!$NoDate) {
+    # Drivers are ordered by build date first so Hmm gives you a more granular revision number (down to the minute).
+    $Epoch = [datetime]::new(2026, 1, 1, 0, 0, 0, [System.DateTimeKind]::Utc)
+    $Now = [datetime]::UtcNow
+    $DriverDate = $Now.ToString("MM/dd/yyyy")
+    $DriverBuild = ($Now - $Epoch).Days
+    $DriverRevision = $Now.ToString("Hmm")
+
+    $BuildArgs += @(
+        "/p:XcpngDriverDate=$DriverDate",
+        "/p:XcpngVersionBuild=$DriverBuild",
+        "/p:XcpngVersionRevision=$DriverRevision"
     )
 }
 
