@@ -185,8 +185,8 @@ NTSTATUS
 BASIC_DISPLAY_DRIVER::GetEdid(D3DDDI_VIDEO_PRESENT_TARGET_ID TargetId) {
     PAGED_CODE();
 
+    static_assert(sizeof(EDIDTemplate) == EDID_V1_BLOCK_SIZE);
     BDD_ASSERT_CHK(!m_Flags.EDID_Attempted);
-    BDD_ASSERT_CHK(sizeof(EDIDTemplate) == EDID_V1_BLOCK_SIZE);
 
     NTSTATUS Status = STATUS_SUCCESS;
     PBYTE Edid = m_EDIDs[TargetId];
