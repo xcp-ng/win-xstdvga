@@ -11,7 +11,9 @@ param (
     [ValidateSet("x64", "arm64")]
     [string]$Platform,
     [Parameter()]
-    [switch]$CodeAnalysis
+    [switch]$CodeAnalysis,
+    [Parameter()]
+    [string]$Project = "xstdvga"
 )
 
 # Drivers are ordered by build date first so Hmm gives you a more granular revision number (down to the minute).
@@ -24,7 +26,7 @@ $DriverRevision = $Now.ToString("Hmm")
 $ErrorActionPreference = "Stop"
 
 $BuildArgs = @(
-    (Resolve-Path "xstdvga.sln"),
+    (Resolve-Path "$Project.sln"),
     "/m:4",
     "/p:Configuration=$Configuration",
     "/p:Platform=$Platform",
