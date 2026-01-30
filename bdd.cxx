@@ -498,19 +498,6 @@ NTSTATUS BASIC_DISPLAY_DRIVER::QueryVidPnHWCapability(_Inout_ DXGKARG_QUERYVIDPN
     return STATUS_SUCCESS;
 }
 
-NTSTATUS BASIC_DISPLAY_DRIVER::GetEdid(D3DDDI_VIDEO_PRESENT_TARGET_ID TargetId) {
-    PAGED_CODE();
-
-    BDD_ASSERT_CHK(!m_Flags.EDID_Attempted);
-
-    NTSTATUS Status = STATUS_SUCCESS;
-    RtlZeroMemory(m_EDIDs[TargetId], sizeof(m_EDIDs[TargetId]));
-
-    m_Flags.EDID_Attempted = TRUE;
-
-    return Status;
-}
-
 VOID BASIC_DISPLAY_DRIVER::BlackOutScreen(D3DDDI_VIDEO_PRESENT_SOURCE_ID SourceId) {
     PAGED_CODE();
 

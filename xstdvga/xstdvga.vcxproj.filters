@@ -43,6 +43,9 @@
     <ClCompile Include="..\bdd_vbe.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\bdd_edid.cxx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\xstdvga.rc">
