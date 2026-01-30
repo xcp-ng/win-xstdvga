@@ -53,7 +53,7 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Inf Include="*.inf">
+    <Inf Include="xstdvga.inx">
       <Filter>Driver Files</Filter>
     </Inf>
   </ItemGroup>
