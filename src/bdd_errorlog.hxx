@@ -37,5 +37,7 @@
 #define BDD_ASSERT_CHK(exp) BDD_ASSERT(exp)
 #else
 #define BDD_ASSERT_CHK(exp) \
-    {}
+    do { \
+        _Analysis_assume_(exp); \
+    } while (0)
 #endif

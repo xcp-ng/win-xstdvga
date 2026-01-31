@@ -383,10 +383,12 @@ private:
     // http://msdn.microsoft.com/en-us/library/windows/hardware/ff569240(v=vs.85).aspx
     NTSTATUS RegisterHWInfo();
 
-    volatile PUSHORT Bar2DispiOffset(USHORT Index) {
+    volatile USHORT *Bar2DispiOffset(_In_range_(0, VBE_DISPI_INDEX_MAX) USHORT Index) const {
         BDD_ASSERT_CHK(m_MappedBar2);
-        BDD_ASSERT_CHK(Index <= 0x0A);
-        return reinterpret_cast<volatile PUSHORT>(static_cast<PUCHAR>(m_MappedBar2) + 0x500 + (Index << 1));
+        BDD_ASSERT_CHK(Index <= VBE_DISPI_INDEX_MAX);
+
+        volatile USHORT *Base = reinterpret_cast<volatile USHORT *>(static_cast<UCHAR *>(m_MappedBar2) + 0x500);
+        return &Base[Index];
     }
 
     USHORT DispiReadUShort(USHORT Index) {
