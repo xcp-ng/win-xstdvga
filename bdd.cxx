@@ -565,11 +565,10 @@ NTSTATUS BASIC_DISPLAY_DRIVER::RegisterHWInfo() {
 
     NTSTATUS Status;
 
-    // TODO: Replace these strings with proper information
-    PCSTR StrHWInfoChipType = "Replace with the chip name";
-    PCSTR StrHWInfoDacType = "Replace with the DAC name or identifier (ID)";
-    PCSTR StrHWInfoAdapterString = "Replace with the name of the adapter";
-    PCSTR StrHWInfoBiosString = "Replace with information about the BIOS";
+    PCSTR StrHWInfoChipType = "QEMU/Bochs Standard VGA";
+    PCSTR StrHWInfoDacType = "QEMU/Bochs Standard VGA";
+    PCSTR StrHWInfoAdapterString = "XCP-ng Standard VGA Display Adapter";
+    PCSTR StrHWInfoBiosString = "QEMU/Bochs Standard VGA";
 
     HANDLE DevInstRegKeyHandle;
     Status = IoOpenDeviceRegistryKey(m_pPhysicalDevice, PLUGPLAY_REGKEY_DRIVER, KEY_SET_VALUE, &DevInstRegKeyHandle);
