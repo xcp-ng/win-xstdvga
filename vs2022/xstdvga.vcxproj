@@ -80,7 +80,7 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
   </ImportGroup>
-  <Import Project="version.props" />
+  <Import Project="..\src\version.props" />
   <ItemGroup Label="WrappedTaskItems">
     <ResourceCompile Include="..\src\xstdvga.rc" />
   </ItemGroup>
