@@ -69,12 +69,9 @@ typedef struct _BLT_INFO {
 #define MAX_CHILDREN 1
 #define MAX_VIEWS 1
 
-#define BDD_USE_LEGACY 0
-
 typedef struct _BDD_FLAGS {
     UINT DriverStarted : 1; // ( 1) 1 after StartDevice and 0 after StopDevice
 
-    UINT Legacy : 1;
     UINT HasPostDisplay : 1;
 
     UINT EDID_Retrieved : 1;     // ( 2) EDID was successfully retrieved
@@ -393,21 +390,11 @@ private:
     }
 
     USHORT DispiReadUShort(USHORT Index) {
-        if (m_Flags.Legacy && BDD_USE_LEGACY) {
-            WRITE_PORT_USHORT((PUSHORT)VBE_DISPI_IOPORT_INDEX, Index);
-            return READ_PORT_USHORT((PUSHORT)VBE_DISPI_IOPORT_DATA);
-        } else {
-            return READ_REGISTER_USHORT(Bar2DispiOffset(Index));
-        }
+        return READ_REGISTER_USHORT(Bar2DispiOffset(Index));
     }
 
     VOID DispiWriteUShort(USHORT Index, USHORT Data) {
-        if (m_Flags.Legacy && BDD_USE_LEGACY) {
-            WRITE_PORT_USHORT((PUSHORT)VBE_DISPI_IOPORT_INDEX, Index);
-            WRITE_PORT_USHORT((PUSHORT)VBE_DISPI_IOPORT_DATA, Data);
-        } else {
-            WRITE_REGISTER_USHORT(Bar2DispiOffset(Index), Data);
-        }
+        WRITE_REGISTER_USHORT(Bar2DispiOffset(Index), Data);
     }
 
     NTSTATUS EnumerateVBE(_In_opt_ PDXGK_DISPLAY_INFORMATION PostDisplayInfo);
