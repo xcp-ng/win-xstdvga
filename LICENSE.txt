@@ -30,8 +30,8 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGE.
 
-Portions derived from the Windows driver samples. See individual source files
-for licensing details.
+Portions derived from the Windows driver samples and licensed under the MS-PL,
+reproduced below. See individual source files for licensing details.
 
 The Microsoft Public License (MS-PL)
 Copyright (c) 2015 Microsoft
