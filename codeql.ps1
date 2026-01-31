@@ -9,18 +9,21 @@ param (
     [ValidateSet("x64", "arm64")]
     [string]$Platform,
     [Parameter()]
-    [string]$Project = "xstdvga"
+    [string]$Project = "xstdvga",
+    [Parameter()]
+    [ValidateSet("vs2022")]
+    [string]$SolutionDir = "vs2022"
 )
 
 $ErrorActionPreference = "Stop"
 
 Push-Location $PSScriptRoot
 try {
-    Remove-Item -Force -Recurse $Project\$Platform\$Configuration -ErrorAction SilentlyContinue
+    Remove-Item -Force -Recurse $SolutionDir\$Platform\$Configuration -ErrorAction SilentlyContinue
     Remove-Item -Force -Recurse database -ErrorAction SilentlyContinue
-    codeql database create database --language=cpp --source-root=. --command="powershell.exe -file .\build.ps1 -Configuration $Configuration -Platform $Platform -CodeAnalysis"
-    codeql database analyze database microsoft/windows-drivers@1.8.0:windows-driver-suites/recommended.qls --format=sarifv2.1.0 --output=$Project\$Platform\$Configuration\$Project.sarif
-    Push-Location $Project\$Platform\$Configuration
+    codeql database create database --language=cpp --source-root=. --command="powershell.exe -file .\build.ps1 -Configuration $Configuration -Platform $Platform -Project $Project -SolutionDir $SolutionDir -CodeAnalysis"
+    codeql database analyze database microsoft/windows-drivers@1.8.0:windows-driver-suites/recommended.qls --format=sarifv2.1.0 --output=$SolutionDir\$Platform\$Configuration\$Project.sarif
+    Push-Location $SolutionDir\$Platform\$Configuration
     try {
         & "C:\Program Files (x86)\Windows Kits\10\Tools\dvl\dvl.exe" /manualCreate $Project $Platform /sarifPath .
     }

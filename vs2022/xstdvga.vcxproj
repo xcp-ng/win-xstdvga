@@ -81,7 +81,9 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
   </ImportGroup>
   <Import Project="version.props" />
-  <ItemGroup Label="WrappedTaskItems" />
+  <ItemGroup Label="WrappedTaskItems">
+    <ResourceCompile Include="..\src\xstdvga.rc" />
+  </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Link>
       <AdditionalDependencies>%(AdditionalDependencies);$(DDK_LIB_PATH)\displib.lib;$(DDK_LIB_PATH)\ntoskrnl.lib</AdditionalDependencies>
@@ -140,15 +142,19 @@
   </ItemDefinitionGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetName>xstdvga</TargetName>
+    <CodeAnalysisRuleSet>C:\Program Files (x86)\Windows Kits\10\CodeAnalysis\DriverRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <TargetName>xstdvga</TargetName>
+    <CodeAnalysisRuleSet>C:\Program Files (x86)\Windows Kits\10\CodeAnalysis\DriverRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetName>xstdvga</TargetName>
+    <CodeAnalysisRuleSet>C:\Program Files (x86)\Windows Kits\10\CodeAnalysis\DriverRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <TargetName>xstdvga</TargetName>
+    <CodeAnalysisRuleSet>C:\Program Files (x86)\Windows Kits\10\CodeAnalysis\DriverRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -203,32 +209,33 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\bdd.cxx" />
-    <ClCompile Include="..\bdd_ddi.cxx" />
-    <ClCompile Include="..\bdd_dmm.cxx" />
-    <ClCompile Include="..\bdd_edid.cxx" />
-    <ClCompile Include="..\bdd_hw.cxx" />
-    <ClCompile Include="..\bdd_util.cxx" />
-    <ClCompile Include="..\bdd_vbe.cxx" />
-    <ClCompile Include="..\bltfuncs.cxx" />
-    <ClCompile Include="..\blthw.cxx" />
-    <ClCompile Include="..\memory.cxx" />
-    <ResourceCompile Include="..\xstdvga.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <Inf Exclude="@(Inf)" Include="xstdvga.inx" />
     <FilesToPackage Include="$(TargetPath)" Condition="'$(ConfigurationType)'=='Driver' or '$(ConfigurationType)'=='DynamicLibrary'" />
   </ItemGroup>
   <ItemGroup>
     <None Exclude="@(None)" Include="*.txt;*.htm;*.html" />
     <None Exclude="@(None)" Include="*.ico;*.cur;*.bmp;*.dlg;*.rct;*.gif;*.jpg;*.jpeg;*.wav;*.jpe;*.tiff;*.tif;*.png;*.rc2" />
     <None Exclude="@(None)" Include="*.def;*.bat;*.hpj;*.asmx" />
+    <Inf Include="..\src\xstdvga.inx">
+      <FileType>Document</FileType>
+    </Inf>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\bdd.hxx" />
-    <ClInclude Include="..\bdd_errorlog.hxx" />
-    <ClInclude Include="..\bdd_vbe.hxx" />
-    <ClInclude Include="..\vbe_qemu.hxx" />
+    <ClInclude Include="..\src\bdd.hxx" />
+    <ClInclude Include="..\src\bdd_errorlog.hxx" />
+    <ClInclude Include="..\src\bdd_vbe.hxx" />
+    <ClInclude Include="..\src\vbe_qemu.hxx" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\bdd.cxx" />
+    <ClCompile Include="..\src\bdd_ddi.cxx" />
+    <ClCompile Include="..\src\bdd_dmm.cxx" />
+    <ClCompile Include="..\src\bdd_edid.cxx" />
+    <ClCompile Include="..\src\bdd_hw.cxx" />
+    <ClCompile Include="..\src\bdd_util.cxx" />
+    <ClCompile Include="..\src\bdd_vbe.cxx" />
+    <ClCompile Include="..\src\bltfuncs.cxx" />
+    <ClCompile Include="..\src\blthw.cxx" />
+    <ClCompile Include="..\src\memory.cxx" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

@@ -201,4 +201,4 @@ FakesAssemblies/
 *.opendb
 
 database/
-xstdvga/xstdvga.DVL.XML
+*.DVL.XML

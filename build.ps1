@@ -15,13 +15,16 @@ param (
     [Parameter()]
     [switch]$NoDate,
     [Parameter()]
-    [string]$Project = "xstdvga"
+    [string]$Project = "xstdvga",
+    [Parameter()]
+    [ValidateSet("vs2022")]
+    [string]$SolutionDir = "vs2022"
 )
 
 $ErrorActionPreference = "Stop"
 
 $BuildArgs = @(
-    (Resolve-Path "$Project.sln"),
+    (Resolve-Path "$SolutionDir\$Project.sln"),
     "/t:$Target",
     "/m:4",
     "/p:Configuration=$Configuration",
