@@ -1,0 +1,23 @@
+name: build-dvl
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  build-dvl:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+      - name: Add MSBuild
+        uses: microsoft/setup-msbuild@v2
+      - name: Build drivers
+        run: .\build-dvl.ps1 -Configuration Release -Platform x64 -SolutionDir vs2022
+      - name: Upload built package
+        uses: actions/upload-artifact@v6
+        with:
+          path: vs2022\x64\Release
+          name: release
