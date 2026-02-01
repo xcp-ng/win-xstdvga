@@ -4,20 +4,38 @@ on:
   workflow_call:
   workflow_dispatch:
 
+env:
+  CONFIGURATION: Release
+  PLATFORM: x64
+  SOLUTION_DIR: vs2022
+
 jobs:
   build-dvl:
     runs-on: windows-2022
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          submodules: true
       - name: Add MSBuild
         uses: microsoft/setup-msbuild@v2
+      - name: Add CodeQL
+        id: add_codeql
+        uses: github/codeql-action/init@v4.32.0
+        with:
+          build-mode: none
+      - name: Download packs
+        run: |
+          & $Env:CODEQL_PATH pack download microsoft/windows-drivers@1.8.2 microsoft/cpp-queries@0.0.4
+          if ($LASTEXITCODE -ne 0) {
+            throw "CodeQL download failed with error $LASTEXITCODE"
+          }
+        env:
+          CODEQL_PATH: ${{steps.add_codeql.outputs.codeql-path}}
       - name: Build drivers
-        run: .\build-dvl.ps1 -Configuration Release -Platform x64 -SolutionDir vs2022
+        run: .\build-dvl.ps1 -Configuration $Env:CONFIGURATION -Platform $Env:PLATFORM -SolutionDir $Env:SOLUTION_DIR -CodeQL $Env:CODEQL_PATH
+        env:
+          CODEQL_PATH: ${{steps.add_codeql.outputs.codeql-path}}
       - name: Upload built package
         uses: actions/upload-artifact@v6
         with:
-          path: vs2022\x64\Release
+          path: ${{env.SOLUTION_DIR}}/${{env.PLATFORM}}/${{env.CONFIGURATION}}
           name: release
