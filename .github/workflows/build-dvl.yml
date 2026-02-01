@@ -17,23 +17,23 @@ jobs:
         uses: actions/checkout@v6
       - name: Add MSBuild
         uses: microsoft/setup-msbuild@v2
+        with:
+          msbuild-architecture: ${{env.PLATFORM}}
       - name: Add CodeQL
         id: add_codeql
         uses: github/codeql-action/init@v4.32.0
         with:
           build-mode: none
+      - name: Add CodeQL to PATH
+        run: Resolve-Path "${{steps.add_codeql.outputs.codeql-path}}\.." | Add-Content -Path $Env:GITHUB_PATH -Force
       - name: Download packs
         run: |
-          & $Env:CODEQL_PATH pack download microsoft/windows-drivers@1.8.2 microsoft/cpp-queries@0.0.4
+          codeql pack download microsoft/windows-drivers@1.8.2 microsoft/cpp-queries@0.0.4
           if ($LASTEXITCODE -ne 0) {
             throw "CodeQL download failed with error $LASTEXITCODE"
           }
-        env:
-          CODEQL_PATH: ${{steps.add_codeql.outputs.codeql-path}}
       - name: Build drivers
-        run: .\build-dvl.ps1 -Configuration $Env:CONFIGURATION -Platform $Env:PLATFORM -SolutionDir $Env:SOLUTION_DIR -CodeQL $Env:CODEQL_PATH
-        env:
-          CODEQL_PATH: ${{steps.add_codeql.outputs.codeql-path}}
+        run: .\build-dvl.ps1 -Configuration $Env:CONFIGURATION -Platform $Env:PLATFORM -SolutionDir $Env:SOLUTION_DIR
       - name: Upload built package
         uses: actions/upload-artifact@v6
         with:
