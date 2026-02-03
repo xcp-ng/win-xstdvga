@@ -250,9 +250,7 @@ VOID CopyBitsGeneric(BLT_INFO *pDst, CONST BLT_INFO *pSrc, UINT NumRects, _In_re
 \**************************************************************************/
 VOID BltBits(BLT_INFO *pDst, CONST BLT_INFO *pSrc, UINT NumRects, _In_reads_(NumRects) CONST RECT *pRects) {
     // pSrc->pBits might be coming from user-mode. User-mode addresses when accessed by kernel need to be protected by a
-    // __try/__except. This usage is redundant in the sample driver since it is already being used for
-    // MmProbeAndLockPages. However, it is very important to have this in place and to make sure developers don't miss
-    // it, it is in these two locations.
+    // __try/__except.
     __try {
         if (pDst->BitsPerPel == 32 && pSrc->BitsPerPel == 32 && pDst->Rotation == D3DKMDT_VPPR_IDENTITY &&
             pSrc->Rotation == D3DKMDT_VPPR_IDENTITY) {

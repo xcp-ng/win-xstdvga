@@ -22,7 +22,6 @@ typedef struct _DO_PRESENT_MEMORY {
     D3DKMDT_VIDPN_PRESENT_PATH_ROTATION Rotation;
     D3DDDI_VIDEO_PRESENT_SOURCE_ID SourceID;
     HANDLE hAdapter;
-    PMDL Mdl;
     BDD_HWBLT *DisplaySource;
 } DO_PRESENT_MEMORY, *PDO_PRESENT_MEMORY;
 
@@ -88,12 +87,6 @@ static void HwExecutePresentDisplayOnly(PDO_PRESENT_MEMORY Context)
             &SrcBltInfo,
             1, // NumRects
             &Context->DirtyRect[i]);
-    }
-
-    // Unmap unmap and unlock the pages.
-    if (Context->Mdl) {
-        MmUnlockPages(Context->Mdl);
-        IoFreeMdl(Context->Mdl);
     }
 
     delete[] reinterpret_cast<BYTE *>(Context);
@@ -165,7 +158,7 @@ BDD_HWBLT::ExecutePresentDisplayOnly(
 {
     PAGED_CODE();
 
-    NTSTATUS Status = STATUS_SUCCESS;
+    UNREFERENCED_PARAMETER(SrcBytesPerPixel);
 
     SIZE_T sizeMoves = NumMoves * sizeof(D3DKMT_MOVE_RECT);
     SIZE_T sizeRects = NumDirtyRects * sizeof(RECT);
@@ -184,7 +177,7 @@ BDD_HWBLT::ExecutePresentDisplayOnly(
     Context->DstStride = pModeCur->DispInfo.Pitch;
     Context->SrcWidth = pModeCur->SrcModeWidth;
     Context->SrcHeight = pModeCur->SrcModeHeight;
-    Context->SrcAddr = NULL;
+    Context->SrcAddr = SrcAddr;
     Context->SrcPitch = SrcPitch;
     Context->Rotation = Rotation;
     Context->NumMoves = NumMoves;
@@ -193,50 +186,7 @@ BDD_HWBLT::ExecutePresentDisplayOnly(
     Context->DirtyRect = DirtyRect;
     Context->SourceID = m_SourceId;
     Context->hAdapter = m_DevExt;
-    Context->Mdl = NULL;
     Context->DisplaySource = this;
-
-    {
-        // Map Source into kernel space, as Blt will be executed by system worker thread
-        UINT sizeToMap = SrcBytesPerPixel * pModeCur->SrcModeWidth * pModeCur->SrcModeHeight;
-
-        PMDL mdl = IoAllocateMdl((PVOID)SrcAddr, sizeToMap, FALSE, FALSE, NULL);
-        if (!mdl) {
-            return STATUS_INSUFFICIENT_RESOURCES;
-        }
-
-        KPROCESSOR_MODE AccessMode =
-            static_cast<KPROCESSOR_MODE>((SrcAddr <= (BYTE *const)MM_USER_PROBE_ADDRESS) ? UserMode : KernelMode);
-        __try {
-            // Probe and lock the pages of this buffer in physical memory.
-            // We need only IoReadAccess.
-            MmProbeAndLockPages(mdl, AccessMode, IoReadAccess);
-        }
-#pragma prefast( \
-    suppress : __WARNING_EXCEPTIONEXECUTEHANDLER, \
-    "try/except is only able to protect against user-mode errors and these are the only errors we try to catch here");
-        __except (EXCEPTION_EXECUTE_HANDLER) {
-            Status = GetExceptionCode();
-            IoFreeMdl(mdl);
-            return Status;
-        }
-
-        // Map the physical pages described by the MDL into system space.
-        // Note: double mapping the buffer this way causes lot of system
-        // overhead for large size buffers.
-        Context->SrcAddr =
-            reinterpret_cast<BYTE *>(MmGetSystemAddressForMdlSafe(mdl, NormalPagePriority | MdlMappingNoExecute));
-
-        if (!Context->SrcAddr) {
-            Status = STATUS_INSUFFICIENT_RESOURCES;
-            MmUnlockPages(mdl);
-            IoFreeMdl(mdl);
-            return Status;
-        }
-
-        // Save Mdl to unmap and unlock the pages in worker thread
-        Context->Mdl = mdl;
-    }
 
     BYTE *rects = reinterpret_cast<BYTE *>(Context + 1);
 
