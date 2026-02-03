@@ -47,6 +47,16 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartDevice(
     BDD_ASSERT(pNumberOfViews != NULL);
     BDD_ASSERT(pNumberOfChildren != NULL);
 
+    if (pDxgkInterface->Version < DXGKDDI_INTERFACE_VERSION || pDxgkInterface->Size < sizeof(m_DxgkInterface)) {
+        BDD_LOG_ERROR(
+            "Cannot support pDxgkInterface Version 0x%lx, Size 0x%lx (expected Version 0x%lx, Size 0x%lx)",
+            pDxgkInterface->Version,
+            pDxgkInterface->Size,
+            DXGKDDI_INTERFACE_VERSION,
+            sizeof(m_DxgkInterface));
+        return STATUS_NOT_SUPPORTED;
+    }
+
     RtlCopyMemory(&m_StartInfo, pDxgkStartInfo, sizeof(m_StartInfo));
     RtlCopyMemory(&m_DxgkInterface, pDxgkInterface, sizeof(m_DxgkInterface));
     RtlZeroMemory(m_CurrentModes, sizeof(m_CurrentModes));
@@ -297,30 +307,6 @@ NTSTATUS BASIC_DISPLAY_DRIVER::QueryAdapterInfo(_In_ CONST DXGKARG_QUERYADAPTERI
 
         pDriverCaps->SupportNonVGA = TRUE;
         pDriverCaps->SupportSmoothRotation = TRUE;
-
-        return STATUS_SUCCESS;
-    }
-
-    case DXGKQAITYPE_DISPLAY_DRIVERCAPS_EXTENSION: {
-        DXGK_DISPLAY_DRIVERCAPS_EXTENSION *pDriverDisplayCaps;
-
-        if (pQueryAdapterInfo->OutputDataSize < sizeof(*pDriverDisplayCaps)) {
-            BDD_LOG_ERROR(
-                "pQueryAdapterInfo->OutputDataSize (0x%x) is smaller than sizeof(DXGK_DISPLAY_DRIVERCAPS_EXTENSION) "
-                "(0x%zx)",
-                pQueryAdapterInfo->OutputDataSize,
-                sizeof(DXGK_DISPLAY_DRIVERCAPS_EXTENSION));
-
-            return STATUS_INVALID_PARAMETER;
-        }
-
-        pDriverDisplayCaps = (DXGK_DISPLAY_DRIVERCAPS_EXTENSION *)pQueryAdapterInfo->pOutputData;
-
-        // Reset all caps values
-        RtlZeroMemory(pDriverDisplayCaps, pQueryAdapterInfo->OutputDataSize);
-
-        // We claim to support virtual display mode.
-        pDriverDisplayCaps->VirtualModeSupport = 1;
 
         return STATUS_SUCCESS;
     }

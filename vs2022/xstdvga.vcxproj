@@ -160,6 +160,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <GuardEHContMetadata>true</GuardEHContMetadata>
+      <PreprocessorDefinitions>DXGKDDI_INTERFACE_VERSION=DXGKDDI_INTERFACE_VERSION_WIN8;_WIN64;_AMD64_;AMD64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <DriverSign>
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
@@ -174,6 +175,7 @@
       <WarningLevel>Level4</WarningLevel>
       <GuardEHContMetadata>true</GuardEHContMetadata>
       <GuardSignedReturns>true</GuardSignedReturns>
+      <PreprocessorDefinitions>DXGKDDI_INTERFACE_VERSION=DXGKDDI_INTERFACE_VERSION_WIN8;_ARM64_;ARM64;_USE_DECLSPECS_FOR_SAL=1;STD_CALL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <DriverSign>
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
@@ -186,6 +188,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <GuardEHContMetadata>true</GuardEHContMetadata>
+      <PreprocessorDefinitions>DXGKDDI_INTERFACE_VERSION=DXGKDDI_INTERFACE_VERSION_WIN8;_WIN64;_AMD64_;AMD64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <DriverSign>
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
@@ -200,6 +203,7 @@
       <WarningLevel>Level4</WarningLevel>
       <GuardEHContMetadata>true</GuardEHContMetadata>
       <GuardSignedReturns>true</GuardSignedReturns>
+      <PreprocessorDefinitions>DXGKDDI_INTERFACE_VERSION=DXGKDDI_INTERFACE_VERSION_WIN8;_ARM64_;ARM64;_USE_DECLSPECS_FOR_SAL=1;STD_CALL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <DriverSign>
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>

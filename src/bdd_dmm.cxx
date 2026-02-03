@@ -441,9 +441,6 @@ BASIC_DISPLAY_DRIVER::EnumVidPnCofuncModality(_In_ CONST DXGKARG_ENUMVIDPNCOFUNC
                 LocalVidPnPresentPath.ContentTransformation.RotationSupport.Rotate180 = 0;
                 LocalVidPnPresentPath.ContentTransformation.RotationSupport.Rotate270 = 0;
 
-                // Since clone is not supported, should not support path-independent rotations
-                LocalVidPnPresentPath.ContentTransformation.RotationSupport.Offset0 = 1;
-
                 SupportFieldsModified = TRUE;
             }
         } // End: ROTATION
