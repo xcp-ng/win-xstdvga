@@ -224,7 +224,8 @@ BDD_HWBLT::ExecutePresentDisplayOnly(
         // Map the physical pages described by the MDL into system space.
         // Note: double mapping the buffer this way causes lot of system
         // overhead for large size buffers.
-        Context->SrcAddr = reinterpret_cast<BYTE *>(MmGetSystemAddressForMdlSafe(mdl, NormalPagePriority));
+        Context->SrcAddr =
+            reinterpret_cast<BYTE *>(MmGetSystemAddressForMdlSafe(mdl, NormalPagePriority | MdlMappingNoExecute));
 
         if (!Context->SrcAddr) {
             Status = STATUS_INSUFFICIENT_RESOURCES;
