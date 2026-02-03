@@ -6,24 +6,24 @@
 
 #pragma once
 
-#define BDD_LOG_ERROR(...) DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_ERROR_LEVEL, __VA_ARGS__)
+#define BDD_LOG_ERROR(fmt, ...) DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_ERROR_LEVEL, fmt "\n", __VA_ARGS__)
 
 // Warnings
-#define BDD_LOG_WARNING(...) DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_WARNING_LEVEL, __VA_ARGS__)
+#define BDD_LOG_WARNING(fmt, ...) DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_WARNING_LEVEL, fmt "\n", __VA_ARGS__)
 
 // Events (i.e. low-frequency tracing)
-#define BDD_LOG_EVENT(...) DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, __VA_ARGS__)
+#define BDD_LOG_EVENT(fmt, ...) DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, fmt "\n", __VA_ARGS__)
 
 // Information (i.e. high-frequency tracing)
-#define BDD_LOG_INFORMATION(...) DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL, __VA_ARGS__)
+#define BDD_LOG_INFORMATION(fmt, ...) DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL, fmt "\n", __VA_ARGS__)
 
 // Low resource logging macros.
-#define BDD_LOG_LOW_RESOURCE(...) DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_WARNING_LEVEL, __VA_ARGS__)
+#define BDD_LOG_LOW_RESOURCE(fmt, ...) DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_WARNING_LEVEL, fmt "\n", __VA_ARGS__)
 
 // Assertion logging macros.
-#define BDD_LOG_ASSERTION(...) \
+#define BDD_LOG_ASSERTION(fmt, ...) \
     do { \
-        DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_ERROR_LEVEL, __VA_ARGS__); \
+        DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_ERROR_LEVEL, fmt "\n", __VA_ARGS__); \
         NT_ASSERT(FALSE); \
     } while (0)
 #define BDD_ASSERT(exp) \
