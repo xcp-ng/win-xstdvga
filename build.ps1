@@ -18,7 +18,9 @@ param (
     [string]$Project = "xstdvga",
     [Parameter()]
     [ValidateSet("vs2022")]
-    [string]$SolutionDir = "vs2022"
+    [string]$SolutionDir = "vs2022",
+    [Parameter()]
+    [string]$SignMode = "TestSign"
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,7 +30,8 @@ $BuildArgs = @(
     "/t:$Target",
     "/m:4",
     "/p:Configuration=$Configuration",
-    "/p:Platform=$Platform"
+    "/p:Platform=$Platform",
+    "/p:SignMode=$SignMode"
 )
 
 if ($CodeAnalysis) {
