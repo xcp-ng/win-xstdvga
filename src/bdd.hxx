@@ -130,13 +130,6 @@ class BDD_HWBLT {
 public:
     D3DDDI_VIDEO_PRESENT_SOURCE_ID m_SourceId;
     BASIC_DISPLAY_DRIVER *m_DevExt;
-    BOOLEAN m_SynchExecution;
-    HANDLE m_hPresentWorkerThread;
-    PVOID m_pPresentWorkerThread;
-
-    //  Events to contol thread execution
-    KEVENT m_hThreadStartupEvent;
-    KEVENT m_hThreadSuspendEvent;
 
     BDD_HWBLT();
 
@@ -146,7 +139,6 @@ public:
         m_DevExt = DevExt;
         m_SourceId = IdSrc;
     }
-    void SetPresentWorkerThreadInfo(HANDLE hWorkerThread);
     NTSTATUS ExecutePresentDisplayOnly(
         _In_ BYTE *DstAddr,
         _In_ UINT DstBitPerPixel,
