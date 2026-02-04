@@ -16,10 +16,19 @@ param (
     [Parameter()]
     [string]$CodeQL = "codeql",
     [Parameter()]
-    [string]$DVL = "C:\Program Files (x86)\Windows Kits\10\Tools\dvl\dvl.exe"
+    [string]$DVL
 )
 
 $ErrorActionPreference = "Stop"
+
+if (!$DVL) {
+    $WDKContentRoot = (msbuild -getProperty:WDKContentRoot (Resolve-Path "$SolutionDir\$Project.vcxproj"))
+    if ($LASTEXITCODE -ne 0) {
+        throw "msbuild cannot find WDKContentRoot with error $LASTEXITCODE"
+    }
+    $DVL = (Join-Path $WDKContentRoot "Tools\dvl\dvl.exe")
+    Write-Verbose "Using detected DVL at $DVL"
+}
 
 Push-Location $PSScriptRoot
 try {
