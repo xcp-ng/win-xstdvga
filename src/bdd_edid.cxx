@@ -51,9 +51,9 @@ static const BYTE EDIDTemplate[] = {
     0x0F,
     0x50,
     0x54,
-    // established timings (Device.Display.Monitor.Modes)
-    0x21,
-    0x08,
+    // no established timings; see the PTM below to see why
+    0x00,
+    0x00,
     // manufacturer timings
     0x00,
 
@@ -75,41 +75,37 @@ static const BYTE EDIDTemplate[] = {
     0x01,
     0x01,
 
-    // preferred timing mode 0.79M3-R (CVT 1.2a)
-    // 1) Enter Desired Horizontal Pixels Here (I_H_PIXELS) =>                     1024
-    // 2) Enter Desired Vertical Lines Here (I_V_LINES) =>                         768
+    // preferred timing mode using CVT 1.2a calculator:
+    // 1) Enter Desired Horizontal Pixels Here (I_H_PIXELS) =>                     1152
+    // 2) Enter Desired Vertical Lines Here (I_V_LINES) =>                         864
     // 3) Enter (Y or N) If You Want Margins  =>                                   n
     // 4) Enter (Y or N) If You Want Interlace  =>                                 n
     // 5) Enter Vertical Scan Frame Rate Here (I_IP_FREQ_RDQ) =>                   60
     // 6) Enter (Y or N) If You Want Reduced Blanking Here   =>                    y
     // 7) Use Reduced Blank (RB) Timing version  (1)  rules (I_RED_BLANK_VER) =>   1
-    // 56 MHz
-    0xE0,
-    0x15,
-    // horizontal (1024 addressable, 160 blank)
-    0x00,
+    // The HLK Server 2019 test "Verify VESA and CEA required display modes" requires that if we report a standard VESA
+    // DMT mode in EDID, then the adapter-reported refresh rate must match that of the reported mode. However our KMDOD
+    // reports the sync frequencies as D3DKMDT_FREQUENCY_NOTSPECIFIED, which causes us to fail the test. 1152x864@60Hz
+    // is a reasonably-sized mode that is not in DMT (the one in DMT is 75Hz), so choose that instead of the more
+    // pedestrian 1024x768@60Hz.
+    // Note that we also can't report any established timings for the same reason.
+    0x3F,
+    0x1B,
+    0x80,
     0xA0,
     0x40,
-    // vertical (768 addressable, 22 blank)
-    0x00,
-    0x16,
+    0x60,
+    0x19,
     0x30,
-    // HFP (48px)
     0x30,
-    // HSPW (32px)
     0x20,
-    // VFP/VSPW (3/4)
     0x34,
-    // HFP/HSPW/VFP/VSPW upper bits
-    0x00,
-    // image size
     0x00,
     0x00,
     0x00,
-    // borders
     0x00,
     0x00,
-    // non-interlaced, no stereo, digital +HSync -VSync
+    0x00,
     0x1A,
 
     // display descriptor
