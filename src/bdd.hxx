@@ -56,6 +56,9 @@ extern "C" {
 
 #define BITS_PER_BYTE 8
 
+// Fixed BPP for KMDOD
+#define BPP 32
+
 typedef struct _BLT_INFO {
     PVOID pBits;
     UINT Pitch;
@@ -184,7 +187,7 @@ private:
     // Device information
     DXGK_DEVICE_INFO m_DeviceInfo;
 
-    BDD_MODE_INFO m_ModeInfo;
+    BDD_VBE_INFO m_VbeInfo;
 
 public:
     BASIC_DISPLAY_DRIVER(_In_ DEVICE_OBJECT *pPhysicalDeviceObject);
@@ -317,12 +320,12 @@ private:
     }
 
     // Given bits per pixel, return the pixel format at the same bpp
-    D3DDDIFORMAT PixelFormatFromBPP(UINT BPP) const {
-        switch (BPP) {
+    D3DDDIFORMAT PixelFormatFromBPP(UINT Bpp) const {
+        switch (Bpp) {
         case 32:
             return D3DDDIFMT_A8R8G8B8;
         default:
-            BDD_LOG_ERROR("A bit per pixel of 0x%x is not supported.", BPP);
+            BDD_LOG_ERROR("A bit per pixel of 0x%x is not supported.", Bpp);
             return D3DDDIFMT_UNKNOWN;
         }
     }
@@ -391,6 +394,8 @@ private:
         WRITE_REGISTER_USHORT(Bar2DispiOffset(Index), Data);
     }
 
+    NTSTATUS
+    AddVBEMode(USHORT Width, USHORT Height, USHORT Bpp, _In_opt_ CONST PHYSICAL_ADDRESS *PhysicalAddress = NULL);
     NTSTATUS EnumerateVBE(_In_opt_ PDXGK_DISPLAY_INFORMATION PostDisplayInfo);
     NTSTATUS SetVBEMode(USHORT ModeNumber);
 };

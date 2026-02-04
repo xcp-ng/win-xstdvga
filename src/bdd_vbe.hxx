@@ -16,17 +16,22 @@ typedef struct _BDD_VBE_STANDARD_RESOLUTION {
 } BDD_VBE_STANDARD_RESOLUTION;
 
 typedef struct _BDD_VBE_MODE {
+    PHYSICAL_ADDRESS PhysicalAddress;
+    USHORT ModeNumber;
     USHORT Width;
     USHORT Height;
     USHORT Pitch;
     USHORT BitsPerPixel;
-    PHYSICAL_ADDRESS PhysicalAddress;
-    USHORT ModeNumber;
-} BDD_VBE_MODE;
+} BDD_VBE_MODE, *PBDD_VBE_MODE;
 
 extern const BDD_VBE_STANDARD_RESOLUTION BddVbeStandardResolutions[BDD_VBE_STANDARD_RESOLUTION_COUNT];
 
-typedef struct _BDD_MODE_INFO {
-    USHORT Count;
+typedef struct _BDD_VBE_INFO {
+    PHYSICAL_ADDRESS Framebuffer;
+    ULONG VideoMemory;
+    USHORT MaxXres;
+    USHORT MaxYres;
+    USHORT MaxBpp;
+    USHORT ModeCount;
     BDD_VBE_MODE Modes[BDD_VBE_STANDARD_RESOLUTION_COUNT];
-} BDD_MODE_INFO;
+} BDD_VBE_INFO, *PBDD_VBE_INFO;

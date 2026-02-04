@@ -22,7 +22,7 @@ BASIC_DISPLAY_DRIVER::BASIC_DISPLAY_DRIVER(_In_ DEVICE_OBJECT *pPhysicalDeviceOb
     RtlZeroMemory(&m_EDIDs, sizeof(m_EDIDs));
     RtlZeroMemory(&m_CurrentModes, sizeof(m_CurrentModes));
     RtlZeroMemory(&m_DeviceInfo, sizeof(m_DeviceInfo));
-    RtlZeroMemory(&m_ModeInfo, sizeof(m_ModeInfo));
+    RtlZeroMemory(&m_VbeInfo, sizeof(m_VbeInfo));
 
     for (UINT i = 0; i < MAX_VIEWS; i++) {
         m_HardwareBlt[i].Initialize(this, i);
@@ -69,9 +69,6 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartDevice(
         return Status;
     }
 
-    // Ignore return value, since it's not the end of the world if we failed to write these values to the registry
-    RegisterHWInfo();
-
     Status = StartHardware();
     if (!NT_SUCCESS(Status)) {
         BDD_LOG_ERROR("StartHardware failed with status 0x%x", Status);
@@ -95,6 +92,9 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartDevice(
         BDD_LOG_ERROR("EnumerateVBE failed with status 0x%x", Status);
         goto OutStopHardware;
     }
+
+    // Ignore return value, since it's not the end of the world if we failed to write these values to the registry
+    RegisterHWInfo();
 
     m_Flags.DriverStarted = TRUE;
     *pNumberOfViews = MAX_VIEWS;
@@ -496,14 +496,14 @@ VOID BASIC_DISPLAY_DRIVER::BlackOutScreen(D3DDDI_VIDEO_PRESENT_SOURCE_ID SourceI
 UINT BASIC_DISPLAY_DRIVER::FindMatchingVBEMode(CONST D3DKMDT_VIDPN_SOURCE_MODE *pSourceMode) const {
     PAGED_CODE();
 
-    for (UINT i = 0; i < m_ModeInfo.Count; i++) {
-        if (m_ModeInfo.Modes[i].Width == pSourceMode->Format.Graphics.PrimSurfSize.cx &&
-            m_ModeInfo.Modes[i].Height == pSourceMode->Format.Graphics.PrimSurfSize.cy &&
-            m_ModeInfo.Modes[i].BitsPerPixel == BPPFromPixelFormat(pSourceMode->Format.Graphics.PixelFormat)) {
+    for (UINT i = 0; i < m_VbeInfo.ModeCount; i++) {
+        if (m_VbeInfo.Modes[i].Width == pSourceMode->Format.Graphics.PrimSurfSize.cx &&
+            m_VbeInfo.Modes[i].Height == pSourceMode->Format.Graphics.PrimSurfSize.cy &&
+            m_VbeInfo.Modes[i].BitsPerPixel == BPPFromPixelFormat(pSourceMode->Format.Graphics.PixelFormat)) {
             return i;
         }
     }
-    return m_ModeInfo.Count;
+    return m_VbeInfo.ModeCount;
 }
 
 NTSTATUS
@@ -586,7 +586,7 @@ NTSTATUS BASIC_DISPLAY_DRIVER::RegisterHWInfo() {
     // MemorySize is a ULONG, unlike the others which are all strings
     UNICODE_STRING ValueNameMemorySize;
     RtlInitUnicodeString(&ValueNameMemorySize, L"HardwareInformation.MemorySize");
-    DWORD MemorySize = 0; // BDD has no access to video memory
+    DWORD MemorySize = m_VbeInfo.VideoMemory;
     Status = ZwSetValueKey(DevInstRegKeyHandle, &ValueNameMemorySize, 0, REG_DWORD, &MemorySize, sizeof(MemorySize));
     if (!NT_SUCCESS(Status)) {
         BDD_LOG_ERROR("ZwSetValueKey for MemorySize failed with Status: 0x%x", Status);

@@ -809,21 +809,21 @@ NTSTATUS BASIC_DISPLAY_DRIVER::SetSourceModeAndPath(
 
     // Try to set VBE mode if it matches
     UINT ModeIndex = FindMatchingVBEMode(pSourceMode);
-    if (ModeIndex < m_ModeInfo.Count) {
-        Status = SetVBEMode(m_ModeInfo.Modes[ModeIndex].ModeNumber);
+    if (ModeIndex < m_VbeInfo.ModeCount) {
+        Status = SetVBEMode(m_VbeInfo.Modes[ModeIndex].ModeNumber);
         if (!NT_SUCCESS(Status)) {
             BDD_LOG_ERROR(
                 "SetVBEMode failed with Status = 0x%x, ModeNumber = 0x%hu",
                 Status,
-                m_ModeInfo.Modes[ModeIndex].ModeNumber);
+                m_VbeInfo.Modes[ModeIndex].ModeNumber);
             return Status;
         }
 
-        pCurrentBddMode->DispInfo.Width = m_ModeInfo.Modes[ModeIndex].Width;
-        pCurrentBddMode->DispInfo.Height = m_ModeInfo.Modes[ModeIndex].Height;
-        pCurrentBddMode->DispInfo.Pitch = m_ModeInfo.Modes[ModeIndex].Pitch;
-        pCurrentBddMode->DispInfo.ColorFormat = PixelFormatFromBPP(m_ModeInfo.Modes[ModeIndex].BitsPerPixel);
-        pCurrentBddMode->DispInfo.PhysicAddress = m_ModeInfo.Modes[ModeIndex].PhysicalAddress;
+        pCurrentBddMode->DispInfo.Width = m_VbeInfo.Modes[ModeIndex].Width;
+        pCurrentBddMode->DispInfo.Height = m_VbeInfo.Modes[ModeIndex].Height;
+        pCurrentBddMode->DispInfo.Pitch = m_VbeInfo.Modes[ModeIndex].Pitch;
+        pCurrentBddMode->DispInfo.ColorFormat = PixelFormatFromBPP(m_VbeInfo.Modes[ModeIndex].BitsPerPixel);
+        pCurrentBddMode->DispInfo.PhysicAddress = m_VbeInfo.Modes[ModeIndex].PhysicalAddress;
     }
 
     pCurrentBddMode->Scaling = pPath->ContentTransformation.Scaling;
@@ -925,11 +925,11 @@ NTSTATUS BASIC_DISPLAY_DRIVER::AddSingleSourceMode(
 
     UNREFERENCED_PARAMETER(SourceId);
 
-    if (m_ModeInfo.Count == 0) {
+    if (m_VbeInfo.ModeCount == 0) {
         return STATUS_UNSUCCESSFUL;
     }
 
-    for (UINT ModeIndex = 0; ModeIndex < m_ModeInfo.Count; ++ModeIndex) {
+    for (UINT ModeIndex = 0; ModeIndex < m_VbeInfo.ModeCount; ++ModeIndex) {
         for (UINT PelFmtIdx = 0; PelFmtIdx < ARRAYSIZE(gBddPixelFormats); ++PelFmtIdx) {
             D3DKMDT_VIDPN_SOURCE_MODE *pVidPnSourceModeInfo = NULL;
             NTSTATUS Status;
@@ -949,14 +949,14 @@ NTSTATUS BASIC_DISPLAY_DRIVER::AddSingleSourceMode(
             pVidPnSourceModeInfo->Format.Graphics.ColorBasis = D3DKMDT_CB_SCRGB;
             pVidPnSourceModeInfo->Format.Graphics.PixelValueAccessMode = D3DKMDT_PVAM_DIRECT;
 
-            pVidPnSourceModeInfo->Format.Graphics.PrimSurfSize.cx = m_ModeInfo.Modes[ModeIndex].Width;
-            pVidPnSourceModeInfo->Format.Graphics.PrimSurfSize.cy = m_ModeInfo.Modes[ModeIndex].Height;
+            pVidPnSourceModeInfo->Format.Graphics.PrimSurfSize.cx = m_VbeInfo.Modes[ModeIndex].Width;
+            pVidPnSourceModeInfo->Format.Graphics.PrimSurfSize.cy = m_VbeInfo.Modes[ModeIndex].Height;
             // Note the ordering wrt. PrimSurfSize
             pVidPnSourceModeInfo->Format.Graphics.VisibleRegionSize =
                 pVidPnSourceModeInfo->Format.Graphics.PrimSurfSize;
-            pVidPnSourceModeInfo->Format.Graphics.Stride = m_ModeInfo.Modes[ModeIndex].Pitch;
+            pVidPnSourceModeInfo->Format.Graphics.Stride = m_VbeInfo.Modes[ModeIndex].Pitch;
             pVidPnSourceModeInfo->Format.Graphics.PixelFormat =
-                PixelFormatFromBPP(m_ModeInfo.Modes[ModeIndex].BitsPerPixel);
+                PixelFormatFromBPP(m_VbeInfo.Modes[ModeIndex].BitsPerPixel);
 
             // Add the mode to the source mode set
             Status = pVidPnSourceModeSetInterface->pfnAddMode(hVidPnSourceModeSet, pVidPnSourceModeInfo);
@@ -988,18 +988,18 @@ NTSTATUS BASIC_DISPLAY_DRIVER::AddSingleTargetMode(
     PAGED_CODE();
 
     UINT StartIdx = 0;
-    UINT EndIdx = m_ModeInfo.Count;
+    UINT EndIdx = m_VbeInfo.ModeCount;
 
     UNREFERENCED_PARAMETER(SourceId);
 
-    if (m_ModeInfo.Count == 0) {
+    if (m_VbeInfo.ModeCount == 0) {
         return STATUS_UNSUCCESSFUL;
     }
 
     // If a source mode is pinned, only add the matching target mode
     if (pVidPnPinnedSourceModeInfo != NULL) {
         UINT MatchingIdx = FindMatchingVBEMode(pVidPnPinnedSourceModeInfo);
-        if (MatchingIdx < m_ModeInfo.Count) {
+        if (MatchingIdx < m_VbeInfo.ModeCount) {
             StartIdx = MatchingIdx;
             EndIdx = MatchingIdx + 1;
         }
@@ -1027,8 +1027,8 @@ NTSTATUS BASIC_DISPLAY_DRIVER::AddSingleTargetMode(
         pVidPnTargetModeInfo->VideoSignalInfo.PixelRate = D3DKMDT_FREQUENCY_NOTSPECIFIED;
         pVidPnTargetModeInfo->VideoSignalInfo.ScanLineOrdering = D3DDDI_VSSLO_PROGRESSIVE;
 
-        pVidPnTargetModeInfo->VideoSignalInfo.TotalSize.cx = m_ModeInfo.Modes[i].Width;
-        pVidPnTargetModeInfo->VideoSignalInfo.TotalSize.cy = m_ModeInfo.Modes[i].Height;
+        pVidPnTargetModeInfo->VideoSignalInfo.TotalSize.cx = m_VbeInfo.Modes[i].Width;
+        pVidPnTargetModeInfo->VideoSignalInfo.TotalSize.cy = m_VbeInfo.Modes[i].Height;
         // Note the ordering wrt. TotalSize
         pVidPnTargetModeInfo->VideoSignalInfo.ActiveSize = pVidPnTargetModeInfo->VideoSignalInfo.TotalSize;
         pVidPnTargetModeInfo->Preference = (i == 0) ? D3DKMDT_MP_PREFERRED : D3DKMDT_MP_NOTPREFERRED;
@@ -1059,11 +1059,11 @@ NTSTATUS
 BASIC_DISPLAY_DRIVER::AddSingleMonitorMode(_In_ CONST DXGKARG_RECOMMENDMONITORMODES *CONST pRecommendMonitorModes) {
     PAGED_CODE();
 
-    if (m_ModeInfo.Count == 0) {
+    if (m_VbeInfo.ModeCount == 0) {
         return STATUS_UNSUCCESSFUL;
     }
 
-    for (UINT i = 0; i < m_ModeInfo.Count; i++) {
+    for (UINT i = 0; i < m_VbeInfo.ModeCount; i++) {
         D3DKMDT_MONITOR_SOURCE_MODE *pMonitorSourceMode = NULL;
         NTSTATUS Status;
 
@@ -1094,8 +1094,8 @@ BASIC_DISPLAY_DRIVER::AddSingleMonitorMode(_In_ CONST DXGKARG_RECOMMENDMONITORMO
         pMonitorSourceMode->ColorCoeffDynamicRanges.ThirdChannel = 8;
         pMonitorSourceMode->ColorCoeffDynamicRanges.FourthChannel = 8;
 
-        pMonitorSourceMode->VideoSignalInfo.TotalSize.cx = m_ModeInfo.Modes[i].Width;
-        pMonitorSourceMode->VideoSignalInfo.TotalSize.cy = m_ModeInfo.Modes[i].Height;
+        pMonitorSourceMode->VideoSignalInfo.TotalSize.cx = m_VbeInfo.Modes[i].Width;
+        pMonitorSourceMode->VideoSignalInfo.TotalSize.cy = m_VbeInfo.Modes[i].Height;
         // Note the ordering wrt. TotalSize
         pMonitorSourceMode->VideoSignalInfo.ActiveSize = pMonitorSourceMode->VideoSignalInfo.TotalSize;
         pMonitorSourceMode->Preference = (i == 0) ? D3DKMDT_MP_PREFERRED : D3DKMDT_MP_NOTPREFERRED;

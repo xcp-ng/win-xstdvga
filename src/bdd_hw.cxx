@@ -10,11 +10,12 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartHardware() {
     NTSTATUS Status;
     ULONG VendorID;
     ULONG DeviceID;
+    PHYSICAL_ADDRESS Framebuffer;
+    ULONGLONG FramebufferBarSize;
+    ULONG DispiMemory;
 
-    // Get the Vendor & Device IDs on PCI system
     PCI_COMMON_HEADER Header = {0};
     ULONG BytesRead;
-
     Status = m_DxgkInterface.DxgkCbReadDeviceSpace(
         m_DxgkInterface.DeviceHandle,
         DXGK_WHICHSPACE_CONFIG,
@@ -22,7 +23,6 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartHardware() {
         0,
         sizeof(Header),
         &BytesRead);
-
     if (!NT_SUCCESS(Status) || BytesRead < sizeof(Header)) {
         BDD_LOG_ERROR("DxgkCbReadDeviceSpace failed with status 0x%x", Status);
         return Status;
@@ -30,15 +30,12 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartHardware() {
 
     VendorID = Header.VendorID;
     DeviceID = Header.DeviceID;
-
     if (Header.VendorID != 0x1234 || Header.DeviceID != 0x1111) {
         return STATUS_GRAPHICS_DRIVER_MISMATCH;
     }
-
     if (Header.BaseClass != PCI_CLASS_DISPLAY_CTLR) {
         return STATUS_GRAPHICS_DRIVER_MISMATCH;
     }
-
     switch (Header.SubClass) {
     case PCI_SUBCLASS_VID_VGA_CTLR:
     case PCI_SUBCLASS_VID_OTHER:
@@ -49,7 +46,6 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartHardware() {
 
     PHYSICAL_ADDRESS Bar2;
     ULONGLONG Bar2Size;
-
     Status = FindMemoryResource(1, (PULONGLONG)&Bar2.QuadPart, &Bar2Size);
     if (!NT_SUCCESS(Status)) {
         BDD_LOG_ERROR("Failed to detect MMIO with status 0x%x", Status);
@@ -60,7 +56,6 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartHardware() {
         return STATUS_DEVICE_CONFIGURATION_ERROR;
     }
 
-    // confusingly enough, DxgkCbMapMemory with InIoSpace=TRUE refers to PIO "space" rather than IO memory space
     Status = m_DxgkInterface.DxgkCbMapMemory(
         m_DxgkInterface.DeviceHandle,
         Bar2,
@@ -75,14 +70,63 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartHardware() {
     }
 
     USHORT DispiId = DispiReadUShort(VBE_DISPI_INDEX_ID);
-    BDD_LOG_TRACE("VBE version 0x%hx", DispiId);
+    BDD_LOG_TRACE("VBE DISPI version 0x%hx", DispiId);
     // needed for VBE_DISPI_INDEX_VIDEO_MEMORY_64K
-    if (DispiId < VBE_DISPI_ID5) {
+    if (DispiId < VBE_DISPI_ID5 || DispiId > VBE_DISPI_ID_MAX) {
         Status = STATUS_GRAPHICS_DRIVER_MISMATCH;
         goto OutStopHardware;
     }
 
+    Status = FindMemoryResource(0, (PULONGLONG)&Framebuffer.QuadPart, &FramebufferBarSize);
+    if (!NT_SUCCESS(Status)) {
+        BDD_LOG_ERROR("Failed to detect framebuffer with Status: 0x%x", Status);
+        goto OutStopHardware;
+    }
+    BDD_LOG_TRACE("Detected framebuffer BAR at 0x%llx+0x%llx", Framebuffer.QuadPart, FramebufferBarSize);
+
+    m_VbeInfo.Framebuffer = Framebuffer;
+    DispiMemory = (ULONG)DispiReadUShort(VBE_DISPI_INDEX_VIDEO_MEMORY_64K) * 64 * 1024;
+    if (DispiMemory > FramebufferBarSize) {
+        BDD_LOG_WARNING(
+            "DISPI reported video memory (%lu) is larger than framebuffer BAR (%llu)",
+            DispiMemory,
+            FramebufferBarSize);
+        m_VbeInfo.VideoMemory = (ULONG)FramebufferBarSize;
+    } else {
+        m_VbeInfo.VideoMemory = DispiMemory;
+    }
+
+    DispiWriteUShort(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED | VBE_DISPI_GETCAPS);
+    if (DispiReadUShort(VBE_DISPI_INDEX_ENABLE) == (VBE_DISPI_DISABLED | VBE_DISPI_GETCAPS)) {
+        m_VbeInfo.MaxXres = DispiReadUShort(VBE_DISPI_INDEX_XRES);
+        m_VbeInfo.MaxYres = DispiReadUShort(VBE_DISPI_INDEX_YRES);
+        m_VbeInfo.MaxBpp = DispiReadUShort(VBE_DISPI_INDEX_BPP);
+
+        if (m_VbeInfo.MaxXres < 640 || m_VbeInfo.MaxYres < 480 || m_VbeInfo.MaxBpp < BPP) {
+            BDD_LOG_ERROR(
+                "DISPI reported capability %hux%hux%hu is not supported (unresponsive device?)",
+                m_VbeInfo.MaxXres,
+                m_VbeInfo.MaxYres,
+                m_VbeInfo.MaxBpp);
+            Status = STATUS_NOT_SUPPORTED;
+            goto OutDisableDispi;
+        } else {
+            BDD_LOG_TRACE(
+                "DISPI reported capability %hux%hux%hu",
+                m_VbeInfo.MaxXres,
+                m_VbeInfo.MaxYres,
+                m_VbeInfo.MaxBpp);
+        }
+    } else {
+        m_VbeInfo.MaxXres = m_VbeInfo.MaxYres = USHORT_MAX;
+        m_VbeInfo.MaxBpp = BPP;
+    }
+    DispiWriteUShort(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED);
+
     return STATUS_SUCCESS;
+
+OutDisableDispi:
+    DispiWriteUShort(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED);
 
 OutStopHardware:
     StopHardware();
@@ -102,6 +146,8 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StopHardware() {
         }
         m_MappedBar2 = NULL;
     }
+
+    RtlZeroMemory(&m_VbeInfo, sizeof(m_VbeInfo));
 
     return STATUS_SUCCESS;
 }

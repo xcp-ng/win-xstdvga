@@ -4,8 +4,6 @@
 
 #pragma code_seg("PAGE")
 
-#define BPP 32
-
 CONST BDD_VBE_STANDARD_RESOLUTION BddVbeStandardResolutions[BDD_VBE_STANDARD_RESOLUTION_COUNT] = {
     {640, 480},   //
     {800, 480},   //
@@ -46,98 +44,93 @@ CONST BDD_VBE_STANDARD_RESOLUTION BddVbeStandardResolutions[BDD_VBE_STANDARD_RES
     {8192, 4320}, //
 };
 
+NTSTATUS
+BASIC_DISPLAY_DRIVER::AddVBEMode(
+    USHORT Width,
+    USHORT Height,
+    USHORT Bpp,
+    _In_opt_ CONST PHYSICAL_ADDRESS *PhysicalAddress) {
+    PAGED_CODE();
+
+    if (Bpp != BPP) {
+        BDD_LOG_INFO("Skipped mode %hux%hux%hu (unsupported BPP)", Width, Height, Bpp);
+        return STATUS_NOT_SUPPORTED;
+    }
+
+    if (Width > m_VbeInfo.MaxXres || Height > m_VbeInfo.MaxYres || Bpp > m_VbeInfo.MaxBpp) {
+        BDD_LOG_INFO("Skipped mode %hux%hux%hu (too big for device)", Width, Height, Bpp);
+        return STATUS_NOT_SUPPORTED;
+    }
+
+    ULONG RequiredMemory = (ULONG)Width * Height * (Bpp / BITS_PER_BYTE);
+    if (RequiredMemory == 0 || RequiredMemory > m_VbeInfo.VideoMemory) {
+        BDD_LOG_INFO("Skipped mode %hux%hux%hu (too big for video memory)", Width, Height, Bpp);
+        return STATUS_NOT_SUPPORTED;
+    }
+
+    if (Width % 8 != 0 || Height % 8 != 0) {
+        // filter out resolutions that don't work very well (1366x768, 1400x1050 etc.)
+        BDD_LOG_INFO("Skipped mode %hux%hux%hu (ratio)", Width, Height, Bpp);
+        return STATUS_NOT_SUPPORTED;
+    }
+
+    // was the POST mode created?
+    if (m_VbeInfo.ModeCount > 0 &&             //
+        m_VbeInfo.Modes[0].Width == Width &&   //
+        m_VbeInfo.Modes[0].Height == Height && //
+        m_VbeInfo.Modes[0].BitsPerPixel == Bpp) {
+        return STATUS_NOT_SUPPORTED;
+    }
+
+    PBDD_VBE_MODE pBddMode = &m_VbeInfo.Modes[m_VbeInfo.ModeCount];
+
+    pBddMode->Width = Width;
+    pBddMode->Height = Height;
+    pBddMode->BitsPerPixel = Bpp;
+    pBddMode->Pitch = (pBddMode->Width * pBddMode->BitsPerPixel) / BITS_PER_BYTE;
+    if (PhysicalAddress) {
+        pBddMode->PhysicalAddress = *PhysicalAddress;
+    } else {
+        pBddMode->PhysicalAddress = m_VbeInfo.Framebuffer;
+    }
+    pBddMode->ModeNumber = m_VbeInfo.ModeCount;
+
+    BDD_LOG_TRACE("Adding mode %hux%hux%hu as number %hu", Width, Height, Bpp, pBddMode->ModeNumber);
+
+    m_VbeInfo.ModeCount++;
+
+    return STATUS_SUCCESS;
+}
+
 NTSTATUS BASIC_DISPLAY_DRIVER::EnumerateVBE(_In_opt_ PDXGK_DISPLAY_INFORMATION PostDisplayInfo) {
     PAGED_CODE();
 
-    PHYSICAL_ADDRESS Framebuffer;
-    ULONGLONG FramebufferSize;
     NTSTATUS Status;
 
-    m_ModeInfo.Count = 0;
-
-    Status = FindMemoryResource(0, (PULONGLONG)&Framebuffer.QuadPart, &FramebufferSize);
-    if (!NT_SUCCESS(Status)) {
-        BDD_LOG_ERROR("Failed to detect framebuffer with Status: 0x%x", Status);
-        return Status;
-    }
-    BDD_LOG_INFO("Detected framebuffer BAR at 0x%llx+0x%llx", Framebuffer.QuadPart, FramebufferSize);
-
-    ULONG DispiMemory = (ULONG)DispiReadUShort(VBE_DISPI_INDEX_VIDEO_MEMORY_64K) * 64 * 1024;
-    if (DispiMemory > FramebufferSize) {
-        BDD_LOG_WARNING(
-            "DISPI reported video memory (%lu) is larger than framebuffer BAR (%llu)",
-            DispiMemory,
-            FramebufferSize);
-    } else {
-        FramebufferSize = DispiMemory;
-    }
+    m_VbeInfo.ModeCount = 0;
 
     if (PostDisplayInfo != NULL && PostDisplayInfo->Width != 0) {
-        UINT PostBPP = BPPFromPixelFormat(PostDisplayInfo->ColorFormat);
-
-        if (PostBPP == BPP) {
-            BDD_VBE_MODE *pBddMode = &m_ModeInfo.Modes[m_ModeInfo.Count];
-
-            pBddMode->Width = (USHORT)PostDisplayInfo->Width;
-            pBddMode->Height = (USHORT)PostDisplayInfo->Height;
-            pBddMode->BitsPerPixel = (USHORT)PostBPP;
-            pBddMode->Pitch = (USHORT)PostDisplayInfo->Pitch;
-            pBddMode->PhysicalAddress = PostDisplayInfo->PhysicAddress;
-            pBddMode->ModeNumber = m_ModeInfo.Count;
-
-            BDD_LOG_TRACE(
-                "Adding POST resolution %hux%hu as mode %hu",
-                pBddMode->Width,
-                pBddMode->Height,
-                pBddMode->ModeNumber);
-
-            m_ModeInfo.Count++;
+        Status = AddVBEMode(
+            (USHORT)PostDisplayInfo->Width,
+            (USHORT)PostDisplayInfo->Height,
+            (USHORT)BPPFromPixelFormat(PostDisplayInfo->ColorFormat),
+            &PostDisplayInfo->PhysicAddress);
+        if (!NT_SUCCESS(Status)) {
+            BDD_LOG_ERROR("Failed to add POST mode with status 0x%x", Status);
         }
     }
 
-    for (UINT i = 0; i < ARRAYSIZE(BddVbeStandardResolutions) && m_ModeInfo.Count < ARRAYSIZE(m_ModeInfo.Modes); i++) {
-        CONST BDD_VBE_STANDARD_RESOLUTION *Resolution = &BddVbeStandardResolutions[i];
-
-        if (Resolution->Width % 8 != 0 || Resolution->Height % 8 != 0) {
-            // filter out resolutions that don't work very well (1366x768, 1400x1050 etc.)
-            BDD_LOG_INFO("Skipped standard resolution %hux%hu (ratio)", Resolution->Width, Resolution->Height);
-            continue;
+    for (UINT i = 0; i < ARRAYSIZE(BddVbeStandardResolutions) && m_VbeInfo.ModeCount < ARRAYSIZE(m_VbeInfo.Modes);
+         i++) {
+        Status = AddVBEMode(BddVbeStandardResolutions[i].Width, BddVbeStandardResolutions[i].Height, BPP);
+        if (!NT_SUCCESS(Status)) {
+            BDD_LOG_INFO("Failed to add standard mode %u with status 0x%x", i, Status);
         }
-
-        ULONG RequiredMemory = (ULONG)Resolution->Width * Resolution->Height * (BPP / BITS_PER_BYTE);
-        if (RequiredMemory == 0 || RequiredMemory > FramebufferSize) {
-            BDD_LOG_INFO("Skipped standard resolution %hux%hu (too big)", Resolution->Width, Resolution->Height);
-            continue;
-        }
-
-        // was the POST mode created?
-        if (m_ModeInfo.Count > 0 &&                             //
-            m_ModeInfo.Modes[0].Width == Resolution->Width &&   //
-            m_ModeInfo.Modes[0].Height == Resolution->Height && //
-            m_ModeInfo.Modes[0].BitsPerPixel == BPP) {
-            continue;
-        }
-
-        BDD_VBE_MODE *pBddMode = &m_ModeInfo.Modes[m_ModeInfo.Count];
-
-        pBddMode->Width = Resolution->Width;
-        pBddMode->Height = Resolution->Height;
-        pBddMode->BitsPerPixel = (USHORT)BPP;
-        pBddMode->Pitch = (pBddMode->Width * pBddMode->BitsPerPixel) / BITS_PER_BYTE;
-        pBddMode->PhysicalAddress = Framebuffer;
-        pBddMode->ModeNumber = m_ModeInfo.Count;
-
-        BDD_LOG_TRACE(
-            "Adding standard resolution %hux%hu as mode %hu",
-            Resolution->Width,
-            Resolution->Height,
-            pBddMode->ModeNumber);
-
-        m_ModeInfo.Count++;
     }
 
-    BDD_LOG_TRACE("Added %hu modes", m_ModeInfo.Count);
-    if (m_ModeInfo.Count == 0) {
+    BDD_LOG_TRACE("Added %hu modes", m_VbeInfo.ModeCount);
+    if (m_VbeInfo.ModeCount == 0) {
+        BDD_LOG_ERROR("No modes added");
         return STATUS_UNSUCCESSFUL;
     }
 
@@ -147,13 +140,13 @@ NTSTATUS BASIC_DISPLAY_DRIVER::EnumerateVBE(_In_opt_ PDXGK_DISPLAY_INFORMATION P
 NTSTATUS BASIC_DISPLAY_DRIVER::SetVBEMode(USHORT ModeNumber) {
     PAGED_CODE();
 
-    if (ModeNumber >= m_ModeInfo.Count) {
+    if (ModeNumber >= m_VbeInfo.ModeCount) {
         return STATUS_INVALID_PARAMETER;
     }
 
-    USHORT Width = m_ModeInfo.Modes[ModeNumber].Width;
-    USHORT Height = m_ModeInfo.Modes[ModeNumber].Height;
-    USHORT Bpp = m_ModeInfo.Modes[ModeNumber].BitsPerPixel;
+    USHORT Width = m_VbeInfo.Modes[ModeNumber].Width;
+    USHORT Height = m_VbeInfo.Modes[ModeNumber].Height;
+    USHORT Bpp = m_VbeInfo.Modes[ModeNumber].BitsPerPixel;
 
     DispiWriteUShort(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED);
     DispiWriteUShort(VBE_DISPI_INDEX_BANK, 0);
