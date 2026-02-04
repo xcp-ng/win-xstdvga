@@ -3,7 +3,7 @@
 [CmdletBinding()]
 param (
     [Parameter(Mandatory)]
-    [ValidateSet("Release")]
+    [ValidateSet("Debug", "Release")]
     [string]$Configuration,
     [Parameter(Mandatory)]
     [ValidateSet("x64", "arm64")]
