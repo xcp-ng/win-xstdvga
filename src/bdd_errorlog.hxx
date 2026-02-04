@@ -1,43 +1,53 @@
-// SPDX-License-Identifier: MS-PL
+// SPDX-License-Identifier: BSD-2-Clause
 
-// Based on the Microsoft KMDOD example
-// Copyright (c) 2010 Microsoft Corporation
 // Copyright 2026 Vates.
 
 #pragma once
 
-#define BDD_LOG_ERROR(fmt, ...) DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_ERROR_LEVEL, fmt "\n", __VA_ARGS__)
+static consteval bool BddStringLiteralContains(PCSTR Haystack, PCSTR Needle) {
+    if (!*Needle)
+        return true;
+    for (; *Haystack; ++Haystack) {
+        PCSTR h = Haystack;
+        PCSTR n = Needle;
+        while (*h && *n && *h == *n) {
+            ++h;
+            ++n;
+        }
+        if (!*n)
+            return true;
+    }
+    return false;
+}
 
-// Warnings
-#define BDD_LOG_WARNING(fmt, ...) DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_WARNING_LEVEL, fmt "\n", __VA_ARGS__)
+#if DBG
+#define BDD_LOG_SAFE(level, fmt, ...) DbgPrintEx(DPFLTR_IHVVIDEO_ID, level, fmt "\n", __VA_ARGS__)
+#else
+#define BDD_LOG_SAFE(level, fmt, ...) \
+    if constexpr (!BddStringLiteralContains(fmt, "%p")) { \
+        DbgPrintEx(DPFLTR_IHVVIDEO_ID, level, fmt "\n", __VA_ARGS__); \
+    }
+#endif
 
-// Events (i.e. low-frequency tracing)
-#define BDD_LOG_EVENT(fmt, ...) DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, fmt "\n", __VA_ARGS__)
+#define BDD_LOG_ERROR(fmt, ...) BDD_LOG_SAFE(DPFLTR_ERROR_LEVEL, fmt, __VA_ARGS__)
+#define BDD_LOG_WARNING(fmt, ...) BDD_LOG_SAFE(DPFLTR_WARNING_LEVEL, fmt, __VA_ARGS__)
+#define BDD_LOG_TRACE(fmt, ...) BDD_LOG_SAFE(DPFLTR_TRACE_LEVEL, fmt, __VA_ARGS__)
+#define BDD_LOG_INFO(fmt, ...) BDD_LOG_SAFE(DPFLTR_INFO_LEVEL, fmt, __VA_ARGS__)
 
-// Information (i.e. high-frequency tracing)
-#define BDD_LOG_INFORMATION(fmt, ...) DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL, fmt "\n", __VA_ARGS__)
-
-// Low resource logging macros.
-#define BDD_LOG_LOW_RESOURCE(fmt, ...) DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_WARNING_LEVEL, fmt "\n", __VA_ARGS__)
-
-// Assertion logging macros.
 #define BDD_LOG_ASSERTION(fmt, ...) \
     do { \
-        DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_ERROR_LEVEL, fmt "\n", __VA_ARGS__); \
+        BDD_LOG_ERROR(fmt, __VA_ARGS__); \
         NT_ASSERT(FALSE); \
     } while (0)
 #define BDD_ASSERT(exp) \
-    { \
+    do { \
         if (!(exp)) { \
             BDD_LOG_ASSERTION(#exp); \
         } \
-    }
+    } while (0)
 
 #if DBG
 #define BDD_ASSERT_CHK(exp) BDD_ASSERT(exp)
 #else
-#define BDD_ASSERT_CHK(exp) \
-    do { \
-        _Analysis_assume_(exp); \
-    } while (0)
+#define BDD_ASSERT_CHK(exp) _Analysis_assume_(exp)
 #endif

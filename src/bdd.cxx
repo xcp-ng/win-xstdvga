@@ -49,7 +49,7 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartDevice(
 
     if (pDxgkInterface->Version < DXGKDDI_INTERFACE_VERSION || pDxgkInterface->Size < sizeof(m_DxgkInterface)) {
         BDD_LOG_ERROR(
-            "Cannot support pDxgkInterface Version 0x%lx, Size 0x%lx (expected Version 0x%lx, Size 0x%lx)",
+            "Cannot support pDxgkInterface Version 0x%lx, Size 0x%lx (expected Version 0x%x, Size 0x%zx)",
             pDxgkInterface->Version,
             pDxgkInterface->Size,
             DXGKDDI_INTERFACE_VERSION,
@@ -86,7 +86,7 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartDevice(
     } else {
         // The most likely cause of failure is that the driver is simply not running on a POST device, or we are running
         // after a pre-WDDM 1.2 driver.
-        BDD_LOG_INFORMATION("DxgkCbAcquirePostDisplayOwnership failed with status 0x%x", Status);
+        BDD_LOG_INFO("DxgkCbAcquirePostDisplayOwnership failed with status 0x%x", Status);
         m_Flags.HasPostDisplay = FALSE;
     }
 

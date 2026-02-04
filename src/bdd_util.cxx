@@ -60,7 +60,7 @@ MapFrameBuffer(
 
         *VirtualAddress = MmMapIoSpaceEx(PhysicalAddress, Length, PAGE_READWRITE | PAGE_NOCACHE);
         if (*VirtualAddress == NULL) {
-            BDD_LOG_LOW_RESOURCE("MmMapIoSpace returned a NULL buffer when trying to allocate 0x%lx bytes", Length);
+            BDD_LOG_WARNING("MmMapIoSpace returned a NULL buffer when trying to allocate 0x%lx bytes", Length);
             return STATUS_NO_MEMORY;
         }
     }

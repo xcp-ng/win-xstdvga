@@ -10,22 +10,12 @@
 #pragma code_seg("INIT")
 // BEGIN: Init Code
 
-#define DBG_PRINT_ENABLE_FILTER(_Id, _Level) \
-    do { \
-        DbgSetDebugFilterState((_Id), (_Level), TRUE); \
-    } while (FALSE)
-
 //
 // Driver Entry point
 //
 
 extern "C" NTSTATUS DriverEntry(_In_ DRIVER_OBJECT *pDriverObject, _In_ UNICODE_STRING *pRegistryPath) {
     PAGED_CODE();
-
-    DBG_PRINT_ENABLE_FILTER(DPFLTR_IHVVIDEO_ID, DPFLTR_ERROR_LEVEL);
-    DBG_PRINT_ENABLE_FILTER(DPFLTR_IHVVIDEO_ID, DPFLTR_WARNING_LEVEL);
-    DBG_PRINT_ENABLE_FILTER(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL);
-    DBG_PRINT_ENABLE_FILTER(DPFLTR_IHVVIDEO_ID, DPFLTR_INFO_LEVEL);
 
     // Initialize DDI function pointers and dxgkrnl
     KMDDOD_INITIALIZATION_DATA InitialData = {0};
@@ -98,7 +88,7 @@ BddDdiAddDevice(_In_ DEVICE_OBJECT *pPhysicalDeviceObject, _Outptr_ PVOID *ppDev
 
     BASIC_DISPLAY_DRIVER *pBDD = new (NonPagedPoolNx) BASIC_DISPLAY_DRIVER(pPhysicalDeviceObject);
     if (pBDD == NULL) {
-        BDD_LOG_LOW_RESOURCE("pBDD failed to be allocated");
+        BDD_LOG_WARNING("pBDD failed to be allocated");
         return STATUS_NO_MEMORY;
     }
 

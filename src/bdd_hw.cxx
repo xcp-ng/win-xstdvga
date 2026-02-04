@@ -75,7 +75,7 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartHardware() {
     }
 
     USHORT DispiId = DispiReadUShort(VBE_DISPI_INDEX_ID);
-    BDD_LOG_INFORMATION("VBE version 0x%hx", DispiId);
+    BDD_LOG_TRACE("VBE version 0x%hx", DispiId);
     // needed for VBE_DISPI_INDEX_VIDEO_MEMORY_64K
     if (DispiId < VBE_DISPI_ID5) {
         Status = STATUS_GRAPHICS_DRIVER_MISMATCH;

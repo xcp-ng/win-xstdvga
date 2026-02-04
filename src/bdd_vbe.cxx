@@ -60,7 +60,7 @@ NTSTATUS BASIC_DISPLAY_DRIVER::EnumerateVBE(_In_opt_ PDXGK_DISPLAY_INFORMATION P
         BDD_LOG_ERROR("Failed to detect framebuffer with Status: 0x%x", Status);
         return Status;
     }
-    BDD_LOG_INFORMATION("Detected framebuffer BAR at 0x%llx+0x%llx", Framebuffer.QuadPart, FramebufferSize);
+    BDD_LOG_INFO("Detected framebuffer BAR at 0x%llx+0x%llx", Framebuffer.QuadPart, FramebufferSize);
 
     ULONG DispiMemory = (ULONG)DispiReadUShort(VBE_DISPI_INDEX_VIDEO_MEMORY_64K) * 64 * 1024;
     if (DispiMemory > FramebufferSize) {
@@ -85,7 +85,7 @@ NTSTATUS BASIC_DISPLAY_DRIVER::EnumerateVBE(_In_opt_ PDXGK_DISPLAY_INFORMATION P
             pBddMode->PhysicalAddress = PostDisplayInfo->PhysicAddress;
             pBddMode->ModeNumber = m_ModeInfo.Count;
 
-            BDD_LOG_INFORMATION(
+            BDD_LOG_TRACE(
                 "Adding POST resolution %hux%hu as mode %hu",
                 pBddMode->Width,
                 pBddMode->Height,
@@ -100,13 +100,13 @@ NTSTATUS BASIC_DISPLAY_DRIVER::EnumerateVBE(_In_opt_ PDXGK_DISPLAY_INFORMATION P
 
         if (Resolution->Width % 8 != 0 || Resolution->Height % 8 != 0) {
             // filter out resolutions that don't work very well (1366x768, 1400x1050 etc.)
-            BDD_LOG_INFORMATION("Skipped standard resolution %hux%hu (ratio)", Resolution->Width, Resolution->Height);
+            BDD_LOG_INFO("Skipped standard resolution %hux%hu (ratio)", Resolution->Width, Resolution->Height);
             continue;
         }
 
         ULONG RequiredMemory = (ULONG)Resolution->Width * Resolution->Height * (BPP / BITS_PER_BYTE);
         if (RequiredMemory == 0 || RequiredMemory > FramebufferSize) {
-            BDD_LOG_INFORMATION("Skipped standard resolution %hux%hu (too big)", Resolution->Width, Resolution->Height);
+            BDD_LOG_INFO("Skipped standard resolution %hux%hu (too big)", Resolution->Width, Resolution->Height);
             continue;
         }
 
@@ -127,7 +127,7 @@ NTSTATUS BASIC_DISPLAY_DRIVER::EnumerateVBE(_In_opt_ PDXGK_DISPLAY_INFORMATION P
         pBddMode->PhysicalAddress = Framebuffer;
         pBddMode->ModeNumber = m_ModeInfo.Count;
 
-        BDD_LOG_INFORMATION(
+        BDD_LOG_TRACE(
             "Adding standard resolution %hux%hu as mode %hu",
             Resolution->Width,
             Resolution->Height,
@@ -136,7 +136,7 @@ NTSTATUS BASIC_DISPLAY_DRIVER::EnumerateVBE(_In_opt_ PDXGK_DISPLAY_INFORMATION P
         m_ModeInfo.Count++;
     }
 
-    BDD_LOG_EVENT("Added %hu modes", m_ModeInfo.Count);
+    BDD_LOG_TRACE("Added %hu modes", m_ModeInfo.Count);
     if (m_ModeInfo.Count == 0) {
         return STATUS_UNSUCCESSFUL;
     }
