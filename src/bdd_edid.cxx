@@ -20,7 +20,7 @@ static const BYTE EDIDTemplate[] = {
     // model
     0x00,
     0x00,
-    // serial (to use TargetId)
+    // serial (to be filled in by GetEdid)
     0x00,
     0x00,
     0x00,
@@ -177,6 +177,33 @@ static const BYTE EDIDTemplate[] = {
     0x00,
 };
 
+static ULONG GetSerialNumber(PDEVICE_OBJECT Pdo, D3DDDI_VIDEO_PRESENT_TARGET_ID TargetId) {
+    PAGED_CODE();
+
+    ULONG Bus, Address, Device, Function;
+    ULONG Length;
+    NTSTATUS Status;
+
+    if (!Pdo) {
+        return TargetId & 0xFFFF;
+    }
+
+    Status = IoGetDeviceProperty(Pdo, DevicePropertyBusNumber, sizeof(Bus), &Bus, &Length);
+    if (!NT_SUCCESS(Status)) {
+        Bus = 0;
+    }
+    Bus &= 0xFF;
+
+    Status = IoGetDeviceProperty(Pdo, DevicePropertyAddress, sizeof(Address), &Address, &Length);
+    if (!NT_SUCCESS(Status)) {
+        Address = 0;
+    }
+    Device = (Address >> 16) & 0x1F;
+    Function = Address & 0x7;
+
+    return (Bus << 24) | (Device << 19) | (Function << 16) | (TargetId & 0xFFFF);
+}
+
 NTSTATUS
 BASIC_DISPLAY_DRIVER::GetEdid(D3DDDI_VIDEO_PRESENT_TARGET_ID TargetId) {
     PAGED_CODE();
@@ -187,10 +214,10 @@ BASIC_DISPLAY_DRIVER::GetEdid(D3DDDI_VIDEO_PRESENT_TARGET_ID TargetId) {
     NTSTATUS Status = STATUS_SUCCESS;
     PBYTE Edid = m_EDIDs[TargetId];
     BYTE Checksum = 0;
+    ULONG SerialNumber = GetSerialNumber(m_DeviceInfo.PhysicalDeviceObject, TargetId);
 
     RtlCopyMemory(Edid, EDIDTemplate, EDID_V1_BLOCK_SIZE);
-    // HACK: trickery to get an unique serial number
-    RtlCopyMemory(Edid + 0xC, &TargetId, 4);
+    RtlCopyMemory(Edid + 0xC, &SerialNumber, sizeof(SerialNumber));
     for (UINT i = 0; i < EDID_V1_BLOCK_SIZE; i++) {
         Checksum += Edid[i];
     }
