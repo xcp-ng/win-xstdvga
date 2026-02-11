@@ -586,7 +586,7 @@ NTSTATUS BASIC_DISPLAY_DRIVER::RegisterHWInfo() {
     // MemorySize is a ULONG, unlike the others which are all strings
     UNICODE_STRING ValueNameMemorySize;
     RtlInitUnicodeString(&ValueNameMemorySize, L"HardwareInformation.MemorySize");
-    DWORD MemorySize = m_VbeInfo.VideoMemory;
+    DWORD MemorySize = m_VbeInfo.VideoMemory >> 20;
     Status = ZwSetValueKey(DevInstRegKeyHandle, &ValueNameMemorySize, 0, REG_DWORD, &MemorySize, sizeof(MemorySize));
     if (!NT_SUCCESS(Status)) {
         BDD_LOG_ERROR("ZwSetValueKey for MemorySize failed with Status: 0x%x", Status);
