@@ -16,7 +16,9 @@ param (
     [Parameter()]
     [string]$CodeQL = "codeql",
     [Parameter()]
-    [string]$DVL
+    [string]$DVL,
+    [Parameter()]
+    [string]$DriverVer
 )
 
 $ErrorActionPreference = "Stop"
@@ -34,11 +36,11 @@ Push-Location $PSScriptRoot
 try {
     Remove-Item -Force -Recurse $SolutionDir\$Platform\$Configuration -ErrorAction SilentlyContinue
     Remove-Item -Force -Recurse database -ErrorAction SilentlyContinue
-    & $CodeQL database create database --language=cpp --source-root=. --command="powershell.exe -file .\build.ps1 -Configuration $Configuration -Platform $Platform -Project $Project -SolutionDir $SolutionDir -CodeAnalysis -SignMode Off"
+    & $CodeQL database create database --language=cpp --source-root=. --command="powershell.exe -file .\build.ps1 -Configuration $Configuration -Platform $Platform -Project $Project -SolutionDir $SolutionDir -CodeAnalysis -SignMode Off -DriverVer `"$DriverVer`""
     if ($LASTEXITCODE -ne 0) {
         throw "CodeQL failed with error $LASTEXITCODE"
     }
-    & $CodeQL database analyze database microsoft/windows-drivers@1.8.2:windows-driver-suites/recommended.qls --format=sarifv2.1.0 --output=$SolutionDir\$Platform\$Configuration\$Project.sarif
+    & $CodeQL database analyze database "microsoft/windows-drivers@1.8.2:windows-driver-suites/recommended.qls" "--format=sarifv2.1.0" "--output=$SolutionDir\$Platform\$Configuration\$Project.sarif"
     if ($LASTEXITCODE -ne 0) {
         throw "CodeQL failed with error $LASTEXITCODE"
     }
@@ -48,6 +50,8 @@ try {
         if ($LASTEXITCODE -ne 0) {
             throw "dvl.exe failed with error $LASTEXITCODE"
         }
+
+        Copy-Item -Force "$Project.pdb", "$Project.sarif", "$Project.DVL.XML" -Destination $Project\
     }
     finally {
         Pop-Location

@@ -13,14 +13,15 @@ param (
     [Parameter()]
     [switch]$CodeAnalysis,
     [Parameter()]
-    [switch]$NoDate,
-    [Parameter()]
     [string]$Project = "xstdvga",
     [Parameter()]
     [ValidateSet("vs2022")]
     [string]$SolutionDir = "vs2022",
     [Parameter()]
-    [string]$SignMode = "TestSign"
+    [string]$SignMode = "TestSign",
+    # Use the INF DriverVer format, e.g. "02/04/2026,0.1.34.1215"
+    [Parameter()]
+    [string]$DriverVer
 )
 
 $ErrorActionPreference = "Stop"
@@ -41,7 +42,23 @@ if ($CodeAnalysis) {
     )
 }
 
-if (!$NoDate) {
+if ($DriverVer) {
+    $DriverVerParts = $DriverVer.Split(",")
+
+    $DriverDate = $DriverVerParts[0].Trim()
+    if ($DriverDate -notmatch "[0-9]{2}/[0-9]{2}/[0-9]{4}") {
+        throw "Malformed driver date"
+    }
+    $Version = [version]::Parse($DriverVerParts[1].Trim())
+    $BuildArgs += @(
+        "/p:XcpngDriverDate=$DriverDate",
+        "/p:XcpngVersionMajor=$($Version.Major)",
+        "/p:XcpngVersionMinor=$($Version.Minor)",
+        "/p:XcpngVersionBuild=$($Version.Build)",
+        "/p:XcpngVersionRevision=$($Version.Revision)"
+    )
+}
+else {
     # Drivers are ordered by build date first so Hmm gives you a more granular revision number (down to the minute).
     $Epoch = [datetime]::new(2026, 1, 1, 0, 0, 0, [System.DateTimeKind]::Utc)
     $Now = [datetime]::UtcNow
