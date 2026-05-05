@@ -68,7 +68,7 @@ BASIC_DISPLAY_DRIVER::AddVBEMode(
         return STATUS_NOT_SUPPORTED;
     }
 
-    if (Width % 8 != 0 || Height % 8 != 0) {
+    if (Width % 16 != 0) {
         // filter out resolutions that don't work very well (1366x768, 1400x1050 etc.)
         BDD_LOG_INFO("Skipped mode %hux%hux%hu (ratio)", Width, Height, Bpp);
         return STATUS_NOT_SUPPORTED;
