@@ -40,7 +40,7 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "CodeQL failed with error $LASTEXITCODE"
     }
-    & $CodeQL database analyze database "microsoft/windows-drivers@1.8.2:windows-driver-suites/recommended.qls" "--format=sarifv2.1.0" "--output=$SolutionDir\$Platform\$Configuration\$Project.sarif"
+    & $CodeQL database analyze database "microsoft/windows-drivers@1.8.2:windows-driver-suites/mustrun.qls" "--format=sarifv2.1.0" "--output=$SolutionDir\$Platform\$Configuration\$Project.sarif"
     if ($LASTEXITCODE -ne 0) {
         throw "CodeQL failed with error $LASTEXITCODE"
     }
