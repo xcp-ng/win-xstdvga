@@ -18,7 +18,9 @@ param (
     [Parameter()]
     [string]$DVL,
     [Parameter()]
-    [string]$DriverVer
+    [string]$DriverVer,
+    [Parameter()]
+    [string]$CodeQLSuite = "microsoft/windows-drivers@1.10.0:windows-driver-suites/mustrun.qls"
 )
 
 $ErrorActionPreference = "Stop"
@@ -45,7 +47,7 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "CodeQL failed with error $LASTEXITCODE"
     }
-    & $CodeQL database analyze database "microsoft/windows-drivers@1.8.2:windows-driver-suites/mustrun.qls" "--format=sarifv2.1.0" "--output=$SolutionDir\$Platform\$Configuration\$Project.sarif"
+    & $CodeQL database analyze database $CodeQLSuite "--format=sarifv2.1.0" "--output=$SolutionDir\$Platform\$Configuration\$Project.sarif"
     if ($LASTEXITCODE -ne 0) {
         throw "CodeQL failed with error $LASTEXITCODE"
     }
