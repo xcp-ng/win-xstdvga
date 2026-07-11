@@ -75,6 +75,7 @@ typedef struct _BLT_INFO {
 typedef struct _BDD_FLAGS {
     UINT DriverStarted : 1; // ( 1) 1 after StartDevice and 0 after StopDevice
 
+    UINT Legacy : 1;
     UINT HasPostDisplay : 1;
 
     UINT EDID_Retrieved : 1;     // ( 2) EDID was successfully retrieved
@@ -366,6 +367,7 @@ private:
         _In_opt_ CONST D3DKMDT_VIDPN_SOURCE_MODE *pVidPnPinnedSourceModeInfo,
         D3DDDI_VIDEO_PRESENT_SOURCE_ID SourceId);
 
+    NTSTATUS DetectIO();
     NTSTATUS StartHardware();
     NTSTATUS StopHardware();
 
@@ -378,7 +380,7 @@ private:
     // http://msdn.microsoft.com/en-us/library/windows/hardware/ff569240(v=vs.85).aspx
     NTSTATUS RegisterHWInfo();
 
-    volatile USHORT *Bar2DispiOffset(_In_range_(0, VBE_DISPI_INDEX_MAX) USHORT Index) const {
+    volatile USHORT *GetBar2DispiOffset(_In_range_(0, VBE_DISPI_INDEX_MAX) USHORT Index) const {
         BDD_ASSERT_CHK(m_MappedBar2);
         BDD_ASSERT_CHK(Index <= VBE_DISPI_INDEX_MAX);
 
@@ -386,12 +388,27 @@ private:
         return &Base[Index];
     }
 
+    // workaround for warning C28138 "The constant argument should instead be variable"
+    PUSHORT GetDispiLegacyPort(USHORT PortAddress) const {
+        return (PUSHORT)(ULONG_PTR)PortAddress;
+    }
+
     USHORT DispiReadUShort(USHORT Index) {
-        return READ_REGISTER_USHORT(Bar2DispiOffset(Index));
+        if (m_Flags.Legacy) {
+            WRITE_PORT_USHORT(GetDispiLegacyPort(VBE_DISPI_IOPORT_INDEX), Index);
+            return READ_PORT_USHORT(GetDispiLegacyPort(VBE_DISPI_IOPORT_DATA));
+        } else {
+            return READ_REGISTER_USHORT(GetBar2DispiOffset(Index));
+        }
     }
 
     VOID DispiWriteUShort(USHORT Index, USHORT Data) {
-        WRITE_REGISTER_USHORT(Bar2DispiOffset(Index), Data);
+        if (m_Flags.Legacy) {
+            WRITE_PORT_USHORT(GetDispiLegacyPort(VBE_DISPI_IOPORT_INDEX), Index);
+            WRITE_PORT_USHORT(GetDispiLegacyPort(VBE_DISPI_IOPORT_DATA), Data);
+        } else {
+            WRITE_REGISTER_USHORT(GetBar2DispiOffset(Index), Data);
+        }
     }
 
     NTSTATUS
