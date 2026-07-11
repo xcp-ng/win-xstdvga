@@ -36,7 +36,12 @@ Push-Location $PSScriptRoot
 try {
     Remove-Item -Force -Recurse $SolutionDir\$Platform\$Configuration -ErrorAction SilentlyContinue
     Remove-Item -Force -Recurse database -ErrorAction SilentlyContinue
-    & $CodeQL database create database --language=cpp --source-root=. --command="powershell.exe -file .\build.ps1 -Configuration $Configuration -Platform $Platform -Project $Project -SolutionDir $SolutionDir -CodeAnalysis -SignMode Off -DriverVer `"$DriverVer`""
+
+    $BuildCommand = "powershell.exe -file .\build.ps1 -Configuration $Configuration -Platform $Platform -Project $Project -SolutionDir $SolutionDir -CodeAnalysis -SignMode Off";
+    if ($DriverVer) {
+        $BuildCommand += " -DriverVer $DriverVer";
+    }
+    & $CodeQL database create database --language=cpp --source-root=. --command=$BuildCommand
     if ($LASTEXITCODE -ne 0) {
         throw "CodeQL failed with error $LASTEXITCODE"
     }
