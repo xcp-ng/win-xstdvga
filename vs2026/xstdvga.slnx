@@ -1,0 +1,9 @@
+<Solution>
+  <Configurations>
+    <Platform Name="ARM64" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="xstdvga.vcxproj" Id="d3c62015-3845-4da8-8522-5dc45b735063">
+    <Deploy />
+  </Project>
+</Solution>

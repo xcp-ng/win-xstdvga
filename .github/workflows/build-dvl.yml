@@ -7,7 +7,7 @@ on:
 env:
   CONFIGURATION: Release
   PLATFORM: x64
-  SOLUTION_DIR: vs2022
+  SOLUTION_DIR: vs2026
 
 jobs:
   build-dvl:
