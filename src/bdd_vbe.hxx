@@ -8,7 +8,7 @@ extern "C" {
 
 #include "vbe_qemu.hxx"
 
-#define BDD_VBE_STANDARD_RESOLUTION_COUNT 37
+#define BDD_VBE_STANDARD_RESOLUTION_COUNT 36
 
 typedef struct _BDD_VBE_STANDARD_RESOLUTION {
     USHORT Width;
