@@ -9,8 +9,15 @@
 
 #pragma once
 
+// use the unaligned traditional Bochs port instead of QEMU port?
+#define VBE_DISPI_USE_UNALIGNED_PORT
+
 #define VBE_DISPI_IOPORT_INDEX 0x01CE
+#if (defined(_X86_) || defined(_AMD64_)) && defined(VBE_DISPI_USE_UNALIGNED_PORT)
+#define VBE_DISPI_IOPORT_DATA 0x01CF
+#else
 #define VBE_DISPI_IOPORT_DATA 0x01D0
+#endif
 
 #define VBE_DISPI_INDEX_ID 0x0
 #define VBE_DISPI_INDEX_XRES 0x1
