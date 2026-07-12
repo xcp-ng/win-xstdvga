@@ -26,8 +26,15 @@ param (
 
 $ErrorActionPreference = "Stop"
 
+if ($SolutionDir -eq "vs2022") {
+    $SolutionFile = (Resolve-Path "$SolutionDir\$Project.sln")
+}
+else {
+    $SolutionFile = (Resolve-Path "$SolutionDir\$Project.slnx")
+}
+
 $BuildArgs = @(
-    (Resolve-Path "$SolutionDir\$Project.sln"),
+    $SolutionFile,
     "/t:$Target",
     "/restore",
     "/m:4",
