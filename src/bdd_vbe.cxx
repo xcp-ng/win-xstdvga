@@ -4,7 +4,7 @@
 
 #pragma code_seg("PAGE")
 
-CONST BDD_VBE_STANDARD_RESOLUTION BddVbeStandardResolutions[BDD_VBE_STANDARD_RESOLUTION_COUNT] = {
+static CONST BDD_VBE_STANDARD_RESOLUTION BddVbeStandardResolutions[] = {
     {640, 480},   //
     {800, 480},   //
     {800, 600},   //
@@ -44,6 +44,7 @@ CONST BDD_VBE_STANDARD_RESOLUTION BddVbeStandardResolutions[BDD_VBE_STANDARD_RES
     {7680, 4320}, //
     {8192, 4320}, //
 };
+static_assert(ARRAYSIZE(BddVbeStandardResolutions) == BDD_VBE_STANDARD_RESOLUTION_COUNT);
 
 NTSTATUS
 BASIC_DISPLAY_DRIVER::AddVBEMode(

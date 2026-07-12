@@ -24,8 +24,6 @@ typedef struct _BDD_VBE_MODE {
     USHORT BitsPerPixel;
 } BDD_VBE_MODE, *PBDD_VBE_MODE;
 
-extern const BDD_VBE_STANDARD_RESOLUTION BddVbeStandardResolutions[BDD_VBE_STANDARD_RESOLUTION_COUNT];
-
 typedef struct _BDD_VBE_INFO {
     PHYSICAL_ADDRESS Framebuffer;
     ULONG VideoMemory;
