@@ -172,41 +172,50 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StopHardware() {
 }
 
 NTSTATUS
-BASIC_DISPLAY_DRIVER::FindMemoryResource(_In_ ULONG Index, _Out_opt_ PULONGLONG Start, _Out_ PULONGLONG Size) {
+BASIC_DISPLAY_DRIVER::FindMemoryResource(_In_ ULONG Index, _Out_ PULONGLONG Start, _Out_ PULONGLONG Size) {
     PAGED_CODE();
 
     PCM_FULL_RESOURCE_DESCRIPTOR Full;
     PCM_PARTIAL_RESOURCE_DESCRIPTOR Partial;
-    ULONG Found = 0;
+    ULONG FoundCount = 0;
 
-    *Size = 0;
-    if (Start) {
-        *Start = 0;
+    if (!Start || !Size) {
+        return STATUS_INVALID_PARAMETER;
     }
 
-    for (ULONG i = 0; i < m_DeviceInfo.TranslatedResourceList->Count; i++) {
-        Full = &m_DeviceInfo.TranslatedResourceList->List[i];
+    *Start = 0;
+    *Size = 0;
 
+    if (!m_DeviceInfo.TranslatedResourceList) {
+        return STATUS_DEVICE_CONFIGURATION_ERROR;
+    }
+
+    Full = m_DeviceInfo.TranslatedResourceList->List;
+    for (ULONG i = 0; i < m_DeviceInfo.TranslatedResourceList->Count; i++) {
         for (ULONG j = 0; j < Full->PartialResourceList.Count; ++j) {
+            ULONGLONG ThisStart, ThisSize;
+
             Partial = &Full->PartialResourceList.PartialDescriptors[j];
 
             if (Partial->Type != CmResourceTypeMemory && Partial->Type != CmResourceTypeMemoryLarge) {
                 continue;
             }
 
-            if (Found++ == Index) {
-                *Size = RtlCmDecodeMemIoResource(Partial, Start);
-                break;
+            ThisSize = RtlCmDecodeMemIoResource(Partial, &ThisStart);
+            BDD_LOG_INFO("Found memory at 0x%llx+0x%llx", ThisStart, ThisSize);
+
+            if (FoundCount++ == Index) {
+                if (ThisSize == 0) {
+                    return STATUS_DEVICE_CONFIGURATION_ERROR;
+                }
+                *Start = ThisStart;
+                *Size = ThisSize;
+                return STATUS_SUCCESS;
             }
         }
-        if (*Size != 0) {
-            break;
-        }
+        Full = (PCM_FULL_RESOURCE_DESCRIPTOR)(Full->PartialResourceList.PartialDescriptors +
+                                              Full->PartialResourceList.Count);
     }
 
-    if (*Size == 0) {
-        return STATUS_DEVICE_CONFIGURATION_ERROR;
-    }
-
-    return STATUS_SUCCESS;
+    return STATUS_DEVICE_CONFIGURATION_ERROR;
 }

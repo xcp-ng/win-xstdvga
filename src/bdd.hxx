@@ -371,7 +371,7 @@ private:
     NTSTATUS StartHardware();
     NTSTATUS StopHardware();
 
-    NTSTATUS FindMemoryResource(_In_ ULONG Index, _Out_opt_ PULONGLONG Start, _Out_ PULONGLONG Size);
+    NTSTATUS FindMemoryResource(_In_ ULONG Index, _Out_ PULONGLONG Start, _Out_ PULONGLONG Size);
 
     // Helper function for RegisterHWInfo
     NTSTATUS WriteHWInfoStr(_In_ HANDLE DevInstRegKeyHandle, _In_ PCWSTR pszwValueName, _In_ PCSTR pszValue);
