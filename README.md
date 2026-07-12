@@ -4,7 +4,10 @@ XCP-ng Standard VGA Display Driver
 This driver provides high-resolution consoles and resolution switching for
 Windows UEFI VMs running on the XCP-ng hypervisor.
 
-To install this package, right-click the INF file and select "Install".
+The recommended installation method is via the XCP-ng Windows Guest Tools
+package: https://github.com/xcp-ng/win-pv-drivers/releases
+
+To install this package manually, right-click the INF file and select "Install".
 Alternatively, you can install it with the pnputil.exe command:
 
     pnputil.exe -i -a xstdvga.inf
