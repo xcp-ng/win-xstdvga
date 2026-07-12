@@ -28,7 +28,6 @@
     <Platform Condition="'$(Platform)' == ''">x64</Platform>
     <SampleGuid>{4E49D9DD-F772-41AD-9367-F225BF8261D3}</SampleGuid>
     <ProjectName>xstdvga</ProjectName>
-    <WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
