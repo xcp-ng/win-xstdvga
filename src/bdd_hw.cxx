@@ -80,8 +80,10 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartHardware() {
 
     Status = DetectIO();
     if (NT_SUCCESS(Status)) {
+        BDD_LOG_TRACE("Using MMIO DISPI access mode");
         m_Flags.Legacy = FALSE;
     } else if (Header.SubClass == PCI_SUBCLASS_VID_VGA_CTLR) {
+        BDD_LOG_TRACE("Using legacy DISPI access mode");
         m_Flags.Legacy = TRUE;
     } else {
         BDD_LOG_ERROR("Failed to detect IO access method with status 0x%x", Status);
@@ -90,9 +92,9 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartHardware() {
 
     USHORT DispiId = DispiReadUShort(VBE_DISPI_INDEX_ID);
     BDD_LOG_TRACE("VBE DISPI version 0x%hx", DispiId);
-    // needed for VBE_DISPI_INDEX_VIDEO_MEMORY_64K
-    if (DispiId < VBE_DISPI_ID5 || DispiId > VBE_DISPI_ID_MAX) {
-        Status = STATUS_GRAPHICS_DRIVER_MISMATCH;
+    // a minimum of VBE_DISPI_ID2 is needed for 0x01CE/0x01CF/0x01D0 ports and VBE_DISPI_LFB_ENABLED
+    if (DispiId < VBE_DISPI_ID2 || DispiId > VBE_DISPI_ID_MAX) {
+        Status = STATUS_DEVICE_CONFIGURATION_ERROR;
         goto OutStopHardware;
     }
 
@@ -115,8 +117,14 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartHardware() {
         m_VbeInfo.VideoMemory = DispiMemory;
     }
 
-    DispiWriteUShort(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED | VBE_DISPI_GETCAPS);
-    if (DispiReadUShort(VBE_DISPI_INDEX_ENABLE) == (VBE_DISPI_DISABLED | VBE_DISPI_GETCAPS)) {
+    if (DispiId >= VBE_DISPI_ID3) {
+        DispiWriteUShort(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED | VBE_DISPI_GETCAPS);
+        if (DispiReadUShort(VBE_DISPI_INDEX_ENABLE) != (VBE_DISPI_DISABLED | VBE_DISPI_GETCAPS)) {
+            BDD_LOG_ERROR("cannot set VBE_DISPI_GETCAPS (unresponsive device?)");
+            Status = STATUS_DEVICE_CONFIGURATION_ERROR;
+            goto OutDisableDispi;
+        }
+
         m_VbeInfo.MaxXres = DispiReadUShort(VBE_DISPI_INDEX_XRES);
         m_VbeInfo.MaxYres = DispiReadUShort(VBE_DISPI_INDEX_YRES);
         m_VbeInfo.MaxBpp = DispiReadUShort(VBE_DISPI_INDEX_BPP);
@@ -127,19 +135,15 @@ NTSTATUS BASIC_DISPLAY_DRIVER::StartHardware() {
                 m_VbeInfo.MaxXres,
                 m_VbeInfo.MaxYres,
                 m_VbeInfo.MaxBpp);
-            Status = STATUS_NOT_SUPPORTED;
+            Status = STATUS_DEVICE_CONFIGURATION_ERROR;
             goto OutDisableDispi;
-        } else {
-            BDD_LOG_TRACE(
-                "DISPI reported capability %hux%hux%hu",
-                m_VbeInfo.MaxXres,
-                m_VbeInfo.MaxYres,
-                m_VbeInfo.MaxBpp);
         }
     } else {
         m_VbeInfo.MaxXres = m_VbeInfo.MaxYres = USHORT_MAX;
         m_VbeInfo.MaxBpp = BPP;
     }
+    BDD_LOG_TRACE("DISPI reported capability %hux%hux%hu", m_VbeInfo.MaxXres, m_VbeInfo.MaxYres, m_VbeInfo.MaxBpp);
+
     DispiWriteUShort(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED);
 
     return STATUS_SUCCESS;
