@@ -36,11 +36,11 @@ else {
 $BuildArgs = @(
     $SolutionFile,
     "/t:$Target",
-    "/restore",
     "/m:4",
     "/p:Configuration=$Configuration",
     "/p:Platform=$Platform",
-    "/p:SignMode=$SignMode"
+    "/p:SignMode=$SignMode",
+    "/p:RestorePackagesConfig=true"
 )
 
 if ($CodeAnalysis) {

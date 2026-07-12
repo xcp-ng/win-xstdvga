@@ -38,6 +38,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "CodeQL download failed with error $LASTEXITCODE"
           }
+      - name: Restore
+        run: .\build.ps1 -Target Restore -Configuration $Env:CONFIGURATION -Platform $Env:PLATFORM -SolutionDir $Env:SOLUTION_DIR
       - name: Build drivers
         run: .\build-dvl.ps1 -Configuration $Env:CONFIGURATION -Platform $Env:PLATFORM -SolutionDir $Env:SOLUTION_DIR
       - name: Upload built package
