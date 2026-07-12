@@ -17,8 +17,8 @@ NTSTATUS BASIC_DISPLAY_DRIVER::DetectIO() {
         BDD_LOG_TRACE("Failed to detect MMIO with status 0x%x", Status);
         return Status;
     }
-    if (Bar2Size < 0x1000 || Bar2Size > ULONG_MAX) {
-        BDD_LOG_ERROR("MMIO region size 0x%llx is invalid", Bar2Size);
+    if (Bar2Size != 0x1000) {
+        BDD_LOG_ERROR("MMIO region 0x%llx+0x%llx is invalid", Bar2.QuadPart, Bar2Size);
         return STATUS_DEVICE_CONFIGURATION_ERROR;
     }
 
