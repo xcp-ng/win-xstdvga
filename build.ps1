@@ -15,8 +15,8 @@ param (
     [Parameter()]
     [string]$Project = "xstdvga",
     [Parameter()]
-    [ValidateSet("vs2022")]
-    [string]$SolutionDir = "vs2022",
+    [ValidateSet("vs2022", "vs2026")]
+    [string]$SolutionDir = "vs2026",
     [Parameter()]
     [string]$SignMode = "TestSign",
     # Use the INF DriverVer format, e.g. "02/04/2026,0.1.34.1215"
@@ -29,6 +29,7 @@ $ErrorActionPreference = "Stop"
 $BuildArgs = @(
     (Resolve-Path "$SolutionDir\$Project.sln"),
     "/t:$Target",
+    "/restore",
     "/m:4",
     "/p:Configuration=$Configuration",
     "/p:Platform=$Platform",

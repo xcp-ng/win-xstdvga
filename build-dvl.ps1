@@ -11,8 +11,8 @@ param (
     [Parameter()]
     [string]$Project = "xstdvga",
     [Parameter()]
-    [ValidateSet("vs2022")]
-    [string]$SolutionDir = "vs2022",
+    [ValidateSet("vs2022", "vs2026")]
+    [string]$SolutionDir = "vs2026",
     [Parameter()]
     [string]$CodeQL = "codeql",
     [Parameter()]
